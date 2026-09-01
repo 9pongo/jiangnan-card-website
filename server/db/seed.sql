@@ -1,2 +1,3 @@
 INSERT INTO users (id,email,display_name,role) VALUES ('00000000-0000-0000-0000-000000000001','manager@example.invalid','王店長','admin');
+INSERT INTO users (id,email,display_name,role) VALUES ('00000000-0000-0000-0000-000000000002','ads@example.invalid','林廣告','ad_operator'), ('00000000-0000-0000-0000-000000000003','content@example.invalid','陳活動','content_editor');
 INSERT INTO banners (name,kind,placement,priority,starts_at,ends_at,target_url,image_key,status,created_by) VALUES ('九月會員日：卡牌周邊 9 折','store','hero',900,'2026-09-01 00:00+08','2026-09-30 23:59+08','/events/september-member-day','banners/2026/09/member-day.webp','published','00000000-0000-0000-0000-000000000001');

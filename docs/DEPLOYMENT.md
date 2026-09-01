@@ -49,3 +49,7 @@ docker compose up --build
 - API 健康檢查：`http://localhost:3000/health`
 
 目前 GitHub Pages 只負責靜態展示；正式 API 與後台需要部署至公司選定的 AWS 或 GCP 帳戶。
+
+## 資料庫遷移
+
+新資料庫容器會依序套用 `001_initial.sql`、`002_banner_workflow.sql` 與種子資料。正式環境必須由 CI/CD 在部署前以受管的遷移工作執行相同 SQL，並記錄執行版本；不得依賴應用程式啟動時自動變更資料庫結構。

@@ -11,6 +11,12 @@ async function loadBanner({ key, element }) {
     if (!banner?.imageUrl) return;
     const target = document.querySelector(element);
     target.innerHTML = `<a class="managed-banner ${banner.kind}" href="${banner.targetUrl || '#'}" ${banner.targetUrl?.startsWith('http') ? 'rel="noopener sponsored" target="_blank"' : ''}><img src="${banner.imageUrl}" alt="${banner.name}"><span>${banner.kind === 'external' ? '廣告' : '店內活動'}</span></a>`;
+    recordEvent(banner.id, 'impression');
+    target.querySelector('a').addEventListener('click', () => recordEvent(banner.id, 'click'));
   } catch { /* Public pages must remain usable when a campaign service is unavailable. */ }
 }
 placements.forEach(loadBanner);
+function recordEvent(id, type) {
+  const eventKey = crypto.randomUUID();
+  fetch(`${bannerApi}/api/v1/public/banners/${id}/events/${type}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ eventKey }), keepalive: true }).catch(() => {});
+}
