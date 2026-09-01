@@ -7,6 +7,8 @@ CREATE TABLE banner_events (
   occurred_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (event_type, event_key)
 );
+CREATE OR REPLACE FUNCTION reject_audit_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'audit_log is append-only'; END; $$;
+CREATE TRIGGER audit_log_no_update_or_delete BEFORE UPDATE OR DELETE ON audit_log FOR EACH ROW EXECUTE FUNCTION reject_audit_mutation();
 CREATE INDEX banner_events_metrics ON banner_events (banner_id, event_type, occurred_at);
 CREATE OR REPLACE FUNCTION touch_banner_updated_at() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
 CREATE TRIGGER banners_touch_updated_at BEFORE UPDATE ON banners FOR EACH ROW EXECUTE FUNCTION touch_banner_updated_at();
