@@ -1,0 +1,5 @@
+CREATE TYPE content_kind AS ENUM ('event', 'notice', 'promotion');
+CREATE TYPE content_status AS ENUM ('draft', 'published', 'archived');
+CREATE TABLE content_posts (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), slug text UNIQUE NOT NULL CHECK (slug ~ '^[a-z0-9-]{3,100}$'), kind content_kind NOT NULL, title text NOT NULL CHECK (char_length(title) BETWEEN 1 AND 160), summary text NOT NULL CHECK (char_length(summary) BETWEEN 1 AND 300), body text NOT NULL DEFAULT '', starts_at timestamptz, ends_at timestamptz, status content_status NOT NULL DEFAULT 'draft', created_by uuid NOT NULL REFERENCES users(id), created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CHECK (ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at));
+CREATE INDEX content_posts_public_listing ON content_posts (status, kind, starts_at DESC, created_at DESC);
+CREATE TRIGGER content_posts_touch_updated_at BEFORE UPDATE ON content_posts FOR EACH ROW EXECUTE FUNCTION touch_banner_updated_at();
