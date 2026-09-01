@@ -13,6 +13,7 @@ services:
       - ./server/db/migrations/002_banner_workflow.sql:/docker-entrypoint-initdb.d/002_banner_workflow.sql:ro
       - ./server/db/migrations/003_products.sql:/docker-entrypoint-initdb.d/003_products.sql:ro
       - ./server/db/migrations/004_content.sql:/docker-entrypoint-initdb.d/004_content.sql:ro
+      - ./server/db/migrations/005_consignment.sql:/docker-entrypoint-initdb.d/005_consignment.sql:ro
       - ./server/db/seed.sql:/docker-entrypoint-initdb.d/002_seed.sql:ro
   api:
     build: ./server
