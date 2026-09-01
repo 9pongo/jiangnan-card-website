@@ -1,0 +1,25 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: jiangnan_card
+      POSTGRES_USER: jiangnan_card
+      POSTGRES_PASSWORD: local-development-only
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./server/db/migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql:ro
+      - ./server/db/seed.sql:/docker-entrypoint-initdb.d/002_seed.sql:ro
+  api:
+    build: ./server
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://jiangnan_card:local-development-only@db:5432/jiangnan_card
+      PUBLIC_ORIGIN: http://localhost:4173
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+volumes:
+  postgres_data:

@@ -1,0 +1,17 @@
+const banners = [
+  { id: 'bnr-001', name: '九月會員日：卡牌周邊 9 折', owner: '江南寶卡', type: 'store', placement: '首頁主視覺', period: '09/01 - 09/30', impressions: '12,840', clicks: '622', status: '發布中', image: 'https://images.unsplash.com/photo-1703023689733-6a4281149189?auto=format&fit=crop&w=180&q=70' },
+  { id: 'bnr-002', name: '星潮玩具新品活動', owner: '星潮玩具', type: 'external', placement: '首頁橫幅 970 × 250', period: '09/02 - 09/16', impressions: '8,120', clicks: '188', status: '待審核', image: 'https://images.unsplash.com/photo-1575767931088-5cb5e584d6bc?auto=format&fit=crop&w=180&q=70' },
+  { id: 'bnr-003', name: '週六寶可夢卡牌交流賽', owner: '江南寶卡', type: 'store', placement: '商品側欄 300 × 600', period: '09/05 - 09/07', impressions: '-', clicks: '-', status: '排程中', image: 'https://images.unsplash.com/photo-1703023689733-6a4281149189?auto=format&fit=crop&w=180&q=70' },
+  { id: 'bnr-004', name: '卡牌收納系列', owner: '卡匣工房', type: 'external', placement: '手機橫幅', period: '草稿', impressions: '-', clicks: '-', status: '草稿', image: 'https://images.unsplash.com/photo-1575767931088-5cb5e584d6bc?auto=format&fit=crop&w=180&q=70' }
+];
+const table = document.querySelector('#banner-table');
+const dialog = document.querySelector('#banner-dialog');
+const toast = document.querySelector('.toast');
+function showToast(message) { toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2600); }
+function statusClass(status) { return status === '發布中' ? 'live' : status === '待審核' ? 'review' : status === '排程中' ? 'scheduled' : ''; }
+function render(filter = 'all') { const selected = filter === 'all' ? banners : banners.filter(b => b.type === filter); table.innerHTML = selected.map(b => `<tr><td><div class="campaign"><img class="campaign-image" src="${b.image}" alt=""><div><b>${b.name}</b><small>${b.owner} ・ ${b.id}</small></div></div></td><td><span class="kind ${b.type}">${b.type === 'store' ? '店內活動' : '第三方廣告'}</span></td><td>${b.placement}</td><td>${b.period}</td><td>${b.impressions}<small> 曝光 / ${b.clicks} 點擊</small></td><td><span class="status ${statusClass(b.status)}">${b.status}</span></td><td><button class="actions" data-action="${b.id}" aria-label="${b.name} 操作選單">⋮</button></td></tr>`).join(''); }
+render();
+document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => { document.querySelector('[data-filter].selected').classList.remove('selected'); button.classList.add('selected'); render(button.dataset.filter); }));
+document.querySelectorAll('#open-banner, #open-banner-2').forEach(button => button.addEventListener('click', () => dialog.showModal()));
+document.querySelector('#banner-form').addEventListener('submit', event => { event.preventDefault(); const data = new FormData(event.currentTarget); const publish = document.activeElement.id === 'publish-new'; banners.unshift({ id: `bnr-${String(banners.length + 1).padStart(3, '0')}`, name: data.get('name'), owner: data.get('type') === 'store' ? '江南寶卡' : '待填廣告主', type: data.get('type'), placement: data.get('placement'), period: '09/02 - 09/30', impressions: '-', clicks: '-', status: publish ? '待審核' : '草稿', image: 'https://images.unsplash.com/photo-1703023689733-6a4281149189?auto=format&fit=crop&w=180&q=70' }); render(document.querySelector('[data-filter].selected').dataset.filter); dialog.close(); event.currentTarget.reset(); showToast(publish ? 'Banner 已送交店長審核。' : 'Banner 草稿已儲存。'); });
+table.addEventListener('click', event => { if (event.target.dataset.action) showToast('正式版將顯示預覽、編輯、停用與審核操作。'); });

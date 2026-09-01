@@ -1,0 +1,10 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE TYPE user_role AS ENUM ('admin', 'product_editor', 'content_editor', 'ad_operator', 'consignment_staff');
+CREATE TYPE banner_kind AS ENUM ('store', 'external');
+CREATE TYPE banner_status AS ENUM ('draft', 'pending_review', 'published', 'scheduled', 'expired', 'disabled');
+CREATE TYPE banner_placement AS ENUM ('hero', 'home_leaderboard', 'product_sidebar', 'mobile_banner');
+CREATE TABLE users (id uuid PRIMARY KEY, email text UNIQUE NOT NULL, display_name text NOT NULL, role user_role NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE banners (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL CHECK (char_length(name) <= 120), kind banner_kind NOT NULL, placement banner_placement NOT NULL, priority integer NOT NULL DEFAULT 100 CHECK (priority BETWEEN 0 AND 1000), starts_at timestamptz NOT NULL, ends_at timestamptz NOT NULL CHECK (ends_at > starts_at), target_url text, image_key text NOT NULL, image_url text, status banner_status NOT NULL DEFAULT 'draft', created_by uuid NOT NULL REFERENCES users(id), approved_by uuid REFERENCES users(id), created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX banners_active_lookup ON banners (placement, status, starts_at, ends_at, priority DESC);
+CREATE TABLE audit_log (id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, actor_id uuid NOT NULL REFERENCES users(id), action text NOT NULL, entity_type text NOT NULL, entity_id uuid, payload jsonb, created_at timestamptz NOT NULL DEFAULT now());
+CREATE OR REPLACE FUNCTION active_banner_for_placement(requested_placement banner_placement, at_time timestamptz) RETURNS TABLE(id uuid, name text, kind banner_kind, target_url text, image_url text) LANGUAGE sql STABLE AS $$ SELECT b.id,b.name,b.kind,b.target_url,b.image_url FROM banners b WHERE b.placement=requested_placement AND b.status IN ('published','scheduled') AND b.starts_at <= at_time AND b.ends_at > at_time ORDER BY CASE WHEN b.kind='store' AND b.priority>=900 THEN 0 ELSE 1 END, b.priority DESC, b.created_at DESC LIMIT 1 $$;
