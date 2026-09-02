@@ -124,9 +124,17 @@ if (stockFilter) {
 }
 const consignDialog = document.querySelector('.consign-dialog');
 const checkoutDialog = document.querySelector('.checkout-dialog');
+const orderConfirmationDialog = document.querySelector('.order-confirmation-dialog');
 let checkoutIdempotencyKey = null;
+function showOrderConfirmation(order) {
+  orderConfirmationDialog.querySelector('[data-order-number]').textContent = order.orderNumber;
+  orderConfirmationDialog.querySelector('[data-order-amount]').textContent = money(order.amountDueCents);
+  orderConfirmationDialog.querySelector('[data-order-expires]').textContent = order.expiresAt ? new Date(order.expiresAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '待確認';
+  orderConfirmationDialog.showModal();
+}
 document.querySelector('#consign-button').addEventListener('click', () => consignDialog.showModal());
 document.querySelectorAll('.dialog-close').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
+document.querySelector('[data-close-order]').addEventListener('click', () => orderConfirmationDialog.close());
 document.querySelectorAll('[data-toast]').forEach(button => button.addEventListener('click', () => showToast(button.dataset.toast)));
 consignDialog.querySelector('form').addEventListener('submit', async event => { event.preventDefault(); if (!apiBase) return showToast('此預覽站尚未連接寄售預約服務。'); const form = event.currentTarget; const submit = form.querySelector('button[type="submit"]'); submit.disabled = true; try { const values = new FormData(form); const response = await fetch(`${apiBase}/api/v1/public/consignment-requests`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sellerName: values.get('sellerName'), sellerContact: values.get('sellerContact'), cardDescription: values.get('cardDescription'), privacyConsent: values.get('privacyConsent') === 'on', privacyVersion: '2026-09-local' }) }); const body = await response.json(); if (!response.ok) throw new Error(body.error || '寄售預約送出失敗。'); form.reset(); consignDialog.close(); showToast(`寄售預約 ${body.data.caseNumber} 已送出，請等待門市聯繫。`); } catch (error) { showToast(error.message || '寄售預約送出失敗。'); } finally { submit.disabled = false; } });
 checkout.addEventListener('click', () => {
@@ -142,7 +150,7 @@ checkoutDialog.querySelector('form').addEventListener('submit', async event => {
     const response = await fetch(`${apiBase}/api/v1/checkout/intents`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idempotencyKey: checkoutIdempotencyKey ??= crypto.randomUUID(), customerEmail: new FormData(event.currentTarget).get('customerEmail'), items: cart.map(item => ({ productId: item.id, quantity: item.quantity })) }) });
     const body = await response.json();
     if (!response.ok) throw new Error(body.error || '建立訂單失敗');
-    cart.length = 0; renderCart(); checkoutDialog.close(); setCart(false); showToast(`訂單 ${body.data.orderNumber} 已建立，請等待付款服務啟用。`);
+    cart.length = 0; renderCart(); checkoutDialog.close(); setCart(false); showOrderConfirmation(body.data);
   } catch (error) { showToast(error.message || '建立訂單失敗，請稍後再試。'); } finally { submit.disabled = false; }
 });
 

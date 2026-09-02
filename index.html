@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="search.css">
   <link rel="stylesheet" href="catalog-filter.css">
   <link rel="stylesheet" href="cart-quantity.css">
+  <link rel="stylesheet" href="order-confirmation.css">
   <link rel="stylesheet" href="banner.css?v=20260903">
 </head>
 <body>
@@ -57,7 +58,8 @@
   <dialog class="search-dialog" aria-label="站內搜尋"><form method="dialog" class="search-box"><input class="search-input" type="search" autocomplete="off" placeholder="搜尋商品、活動或公告" aria-label="搜尋商品、活動或公告"><button class="search-close" value="cancel" aria-label="關閉搜尋">×</button></form><div class="search-results"><p class="search-hint">輸入關鍵字，搜尋商品、活動與公告。</p></div></dialog><aside class="cart-panel" aria-label="購物車" aria-hidden="true"><div class="cart-head"><div><p class="eyebrow">YOUR CART</p><h2>購物車</h2></div><button class="icon-button cart-close" aria-label="關閉購物車"><i data-lucide="x"></i></button></div><div class="cart-items"><p class="empty">尚未加入商品</p></div><div class="cart-footer"><div><span>應付金額</span><strong class="cart-total">NT$ 0</strong></div><button class="button checkout" disabled>前往結帳 <i data-lucide="arrow-right"></i></button><small class="checkout-note">設定正式 API 後，將建立付款訂單；尚未完成金流串接。</small></div></aside><div class="scrim"></div>
   <dialog class="consign-dialog"><button class="dialog-close" aria-label="關閉"><i data-lucide="x"></i></button><p class="eyebrow">CARD CONSIGNMENT</p><h2>預約卡牌寄售</h2><form><label>姓名<input required name="sellerName" placeholder="您的稱呼"></label><label>聯絡方式<input required name="sellerContact" placeholder="手機或 LINE ID"></label><label>卡牌品項<textarea required name="cardDescription" placeholder="例如：寶可夢 SV 系列，約 20 張"></textarea></label><label class="consent"><input required name="privacyConsent" type="checkbox">我同意提供聯絡資訊供本次寄售預約與門市聯繫使用。</label><button class="button" type="submit">送出預約 <i data-lucide="send"></i></button></form></dialog>
   <dialog class="checkout-dialog"><button class="dialog-close" aria-label="關閉"><i data-lucide="x"></i></button><p class="eyebrow">CHECKOUT</p><h2>建立付款訂單</h2><form><label>電子信箱<input name="customerEmail" type="email" autocomplete="email" required placeholder="用於寄送訂單與到貨通知"></label><p class="form-note">按下確認後會鎖定現貨庫存並建立待付款訂單。付款、取消與庫存釋回流程尚未上線。</p><button class="button" type="submit">確認建立訂單 <i data-lucide="arrow-right"></i></button></form></dialog>
+  <dialog class="order-confirmation-dialog"><button class="dialog-close" aria-label="關閉"><i data-lucide="x"></i></button><p class="eyebrow">ORDER CREATED</p><h2>訂單已建立</h2><dl><div><dt>訂單編號</dt><dd data-order-number></dd></div><div><dt>應付金額</dt><dd data-order-amount></dd></div><div><dt>保留至</dt><dd data-order-expires></dd></div></dl><p class="form-note">此訂單目前為待付款狀態。付款、取消與出貨服務尚未啟用。</p><button class="button" type="button" data-close-order>完成</button></dialog>
   <div class="toast" role="status"></div>
-  <script src="runtime-config.js"></script><script src="https://unpkg.com/lucide@latest"></script><script src="script.js"></script><script src="banner.js?v=20260903"></script>
+  <script src="runtime-config.js"></script><script src="https://unpkg.com/lucide@latest"></script><script src="script.js?v=20260903"></script><script src="banner.js?v=20260903"></script>
 </body>
 </html>
