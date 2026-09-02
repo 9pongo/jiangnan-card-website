@@ -19,6 +19,8 @@
   window.JiangnanAdminApi = {
     enabled: Boolean(base && typeof getToken === 'function'), request,
     listBanners: () => request('/api/v1/admin/banners'),
+    createBanner: input => request('/api/v1/admin/banners', { method: 'POST', body: JSON.stringify(input) }),
+    submitBanner: id => request(`/api/v1/admin/banners/${id}/submit`, { method: 'POST' }),
     listProducts: () => request('/api/v1/admin/products'),
     createProduct: input => request('/api/v1/admin/products', { method: 'POST', body: JSON.stringify(input) }),
     listContent: () => request('/api/v1/admin/content'),
