@@ -124,19 +124,22 @@ if (stockFilter) {
 }
 const consignDialog = document.querySelector('.consign-dialog');
 const checkoutDialog = document.querySelector('.checkout-dialog');
+let checkoutIdempotencyKey = null;
 document.querySelector('#consign-button').addEventListener('click', () => consignDialog.showModal());
 document.querySelectorAll('.dialog-close').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
 document.querySelectorAll('[data-toast]').forEach(button => button.addEventListener('click', () => showToast(button.dataset.toast)));
 consignDialog.querySelector('form').addEventListener('submit', async event => { event.preventDefault(); if (!apiBase) return showToast('此預覽站尚未連接寄售預約服務。'); const form = event.currentTarget; const submit = form.querySelector('button[type="submit"]'); submit.disabled = true; try { const values = new FormData(form); const response = await fetch(`${apiBase}/api/v1/public/consignment-requests`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sellerName: values.get('sellerName'), sellerContact: values.get('sellerContact'), cardDescription: values.get('cardDescription'), privacyConsent: values.get('privacyConsent') === 'on', privacyVersion: '2026-09-local' }) }); const body = await response.json(); if (!response.ok) throw new Error(body.error || '寄售預約送出失敗。'); form.reset(); consignDialog.close(); showToast(`寄售預約 ${body.data.caseNumber} 已送出，請等待門市聯繫。`); } catch (error) { showToast(error.message || '寄售預約送出失敗。'); } finally { submit.disabled = false; } });
 checkout.addEventListener('click', () => {
   if (!apiBase || cart.some(item => !item.id)) return showToast('此預覽站尚未連接正式訂購服務。');
+  checkoutIdempotencyKey = crypto.randomUUID();
   checkoutDialog.showModal();
 });
+checkoutDialog.addEventListener('close', () => { checkoutIdempotencyKey = null; });
 checkoutDialog.querySelector('form').addEventListener('submit', async event => {
   event.preventDefault();
   const submit = event.currentTarget.querySelector('button[type="submit"]'); submit.disabled = true;
   try {
-    const response = await fetch(`${apiBase}/api/v1/checkout/intents`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idempotencyKey: crypto.randomUUID(), customerEmail: new FormData(event.currentTarget).get('customerEmail'), items: cart.map(item => ({ productId: item.id, quantity: item.quantity })) }) });
+    const response = await fetch(`${apiBase}/api/v1/checkout/intents`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idempotencyKey: checkoutIdempotencyKey ??= crypto.randomUUID(), customerEmail: new FormData(event.currentTarget).get('customerEmail'), items: cart.map(item => ({ productId: item.id, quantity: item.quantity })) }) });
     const body = await response.json();
     if (!response.ok) throw new Error(body.error || '建立訂單失敗');
     cart.length = 0; renderCart(); checkoutDialog.close(); setCart(false); showToast(`訂單 ${body.data.orderNumber} 已建立，請等待付款服務啟用。`);
