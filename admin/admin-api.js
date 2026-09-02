@@ -39,6 +39,11 @@
     }));
   }
 
+  document.querySelectorAll('dialog button.close, dialog button[value="cancel"]').forEach(button => {
+    button.type = 'button';
+    button.addEventListener('click', () => button.closest('dialog')?.close());
+  });
+
   window.JiangnanAdminApi = {
     enabled: Boolean(base && (demoRole || typeof getToken === 'function')), request,
     listBanners: () => request('/api/v1/admin/banners'),
