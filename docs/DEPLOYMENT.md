@@ -51,6 +51,12 @@
 1. 寄售案件的作業狀態僅允許 `submitted → received → listed → returned`，或在收件前 `submitted → cancelled`；每次變更均由 API 驗證前一狀態並寫入稽核紀錄。
 2. 後台不提供手動標記「售出」或手動結算寄售款項。這兩個動作必須由付款、庫存與對帳流程以可重試且可稽核的交易處理，避免單一後台按鈕造成卡片與款項狀態不一致。
 
+## 訂單意圖與庫存保留
+
+1. 建立訂單意圖時，現貨商品會在同一交易中扣除可售庫存，並記錄 `expires_at`；預設保留時間為 30 分鐘，可由 `ORDER_INTENT_TTL_MINUTES` 調整。訂單意圖不是付款成功，也不可由後台手動改成已付款。
+2. 由受管排程器呼叫 `POST /api/v1/internal/orders/release-expired`，帶入 `X-Order-Expiry-Token`。排程執行身分必須設定 `ORDER_EXPIRY_TOKEN` 與已對應 `users` 的 `ORDER_EXPIRY_ACTOR_ID`；API 會在同一交易中釋回保留現貨、標記訂單 `expired`、記錄釋放時間與稽核資料。逾時作業可安全重試。
+3. 正式環境將此端點置於私有網路，僅允許 EventBridge／Cloud Scheduler 等排程工作負載呼叫；不得在瀏覽器、GitHub Pages 或管理後台暴露該 token。
+
 ## Banner 顯示規則
 
 1. 僅選擇 `published` 或 `scheduled`，且目前位於 `starts_at` 與 `ends_at` 期間的素材。
