@@ -17,6 +17,28 @@
     return body.data;
   }
 
+  const nav = document.querySelector('.sidebar nav');
+  if (nav) {
+    const currentPage = location.pathname.split('/').pop() || 'index.html';
+    const links = [
+      ['index.html', '總覽'],
+      ['index.html#banners', 'Banner 與廣告'],
+      ['products.html', '商品管理'],
+      ['content.html', '活動與公告'],
+      ['consignment.html', '卡牌寄售'],
+      ['orders.html', '訂單'],
+      ['members.html', '成員與權限']
+    ];
+    nav.replaceChildren(...links.map(([href, label]) => {
+      const link = document.createElement('a');
+      link.href = href;
+      link.textContent = label;
+      const isBannerView = currentPage === 'index.html' && location.hash === '#banners';
+      if (href.includes('#') ? isBannerView : !isBannerView && href === currentPage) link.className = 'active';
+      return link;
+    }));
+  }
+
   window.JiangnanAdminApi = {
     enabled: Boolean(base && (demoRole || typeof getToken === 'function')), request,
     listBanners: () => request('/api/v1/admin/banners'),
