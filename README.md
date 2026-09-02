@@ -6,9 +6,9 @@
 
 ## 本機預覽
 
-在此資料夾啟動靜態網站伺服器後，開啟 `index.html` 即可預覽。GitHub Pages 預設顯示示範資料；部署公開 API 後，由部署流程覆寫 `runtime-config.js` 中的 `window.JIANGNAN_API_BASE` 為 HTTPS API 網址，首頁會讀取已發布商品、公告與活動，並以 API 建立訂單意向。
+在此資料夾啟動靜態網站伺服器後，開啟 `index.html` 即可預覽。當瀏覽器位於 `localhost` 或 `127.0.0.1` 時，`runtime-config.js` 會自動連到 Docker demo API；GitHub Pages 保持展示資料。正式部署由發布流程覆寫 API origin，首頁會讀取已發布商品、公告與活動，並以 API 建立訂單意向。
 
-`product.html?id=...` 與 `post.html?slug=...` 是商品、公告與活動的公開詳細頁，皆只會顯示目前已發布且在有效期間內的資料。訂單意向會由伺服器重新計算應付訂金／金額並交易式扣減現貨庫存；這不等同付款完成。正式上線前仍須完成金流回呼驗證、逾時取消與庫存釋回、會員身分、寄售表單的人機驗證與個資告知。`/admin/` 目前是後台操作展示，不可接到正式 API。
+`product.html?id=...` 與 `post.html?slug=...` 是商品、公告與活動的公開詳細頁，皆只會顯示目前已發布且在有效期間內的資料。訂單意向會由伺服器重新計算應付訂金／金額並交易式扣減現貨庫存；這不等同付款完成。公開寄售預約會建立待收件案件，正式上線前仍須完成金流回呼驗證、會員身分、寄售表單人機驗證與完整個資告知。`/admin/` 在 localhost 使用 demo 角色驗收；GitHub Pages 的 `/admin/` 只作展示，不可接到正式 API。
 
 ## 發布至 GitHub Pages
 
