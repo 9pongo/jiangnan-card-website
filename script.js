@@ -35,7 +35,7 @@ function renderSearchResults(query = '') {
   searchResults.innerHTML = !term ? '<p class="search-hint">輸入關鍵字，搜尋商品、活動與公告。</p>' : matches.length ? matches.map(item => `<a class="search-result" href="${item.href}"><span class="search-kind">${item.kind}</span><span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.description || '')}</p></span><span class="search-arrow">→</span></a>`).join('') : '<p class="search-hint">找不到相符內容，請換個關鍵字試試。</p>';
 }
 function renderCart() {
-  items.innerHTML = cart.length ? cart.map((item, index) => `<article class="cart-item"><div><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.type)}</small></div><div class="cart-line-price"><b>${money(item.price * item.quantity)}</b><div class="cart-quantity" aria-label="${escapeHtml(item.name)} 數量"><button data-quantity="${index}" data-change="-1" aria-label="減少數量" ${item.quantity <= 1 ? 'disabled' : ''}>−</button><span>${item.quantity}</span><button data-quantity="${index}" data-change="1" aria-label="增加數量" ${item.quantity >= 10 ? 'disabled' : ''}>+</button></div><button class="cart-remove" data-remove="${index}">移除</button></div></article>`).join('') : '<p class="empty">尚未加入商品</p>';
+  items.innerHTML = cart.length ? cart.map((item, index) => `<article class="cart-item"><div><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.type)}${item.maxQuantity < 10 ? ` ・ 最多 ${item.maxQuantity} 件` : ''}</small></div><div class="cart-line-price"><b>${money(item.price * item.quantity)}</b><div class="cart-quantity" aria-label="${escapeHtml(item.name)} 數量"><button data-quantity="${index}" data-change="-1" aria-label="減少數量" ${item.quantity <= 1 ? 'disabled' : ''}>−</button><span>${item.quantity}</span><button data-quantity="${index}" data-change="1" aria-label="增加數量" ${item.quantity >= item.maxQuantity ? 'disabled' : ''}>+</button></div><button class="cart-remove" data-remove="${index}">移除</button></div></article>`).join('') : '<p class="empty">尚未加入商品</p>';
   const amount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   total.textContent = money(amount);
   const quantity = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -46,9 +46,10 @@ function renderCart() {
 function setCart(open) { panel.classList.toggle('open', open); scrim.classList.toggle('open', open); panel.setAttribute('aria-hidden', String(!open)); }
 function addToCart(button) {
   const id = button.dataset.productId || null;
+  const maxQuantity = Math.max(1, Math.min(10, Number(button.dataset.maxQuantity || 10)));
   const existing = cart.find(item => (id && item.id === id) || (!id && item.name === button.dataset.name && item.type === button.dataset.type));
-  if (existing) { existing.quantity = Math.min(existing.quantity + 1, 10); if (existing.quantity === 10) showToast('單一商品最多可購買 10 件。'); }
-  else cart.push({ id, name: button.dataset.name, price: Number(button.dataset.price), type: button.dataset.type, quantity: 1 });
+  if (existing) { existing.quantity = Math.min(existing.quantity + 1, existing.maxQuantity); if (existing.quantity === existing.maxQuantity) showToast(`此商品最多可加入 ${existing.maxQuantity} 件。`); }
+  else cart.push({ id, name: button.dataset.name, price: Number(button.dataset.price), type: button.dataset.type, quantity: 1, maxQuantity });
   renderCart();
   setCart(true);
 }
@@ -60,7 +61,7 @@ function productMarkup(product, index) {
   const release = preorder ? `<p class="release">預計 ${escapeHtml(product.releaseDate || '待公告')} 到貨</p>` : `<p class="release">${product.availableStock > 0 ? `庫存 ${product.availableStock} 件` : '目前缺貨'}</p>`;
   const disabled = !preorder && product.availableStock < 1;
   const price = product.originalPriceCents ? `<span class="original-price">${money(product.originalPriceCents)}</span><b class="sale-price">${money(product.priceCents)}</b>` : `<b>${money(product.priceCents)}</b>`;
-  return `<article class="product-card" data-category="${escapeHtml(product.category || 'booster')}"><a class="product-art ${product.imageUrl ? 'photo-card' : 'art-mecha'}" href="product.html?id=${encodeURIComponent(product.id)}">${image}</a><div class="product-meta"><p class="tag ${preorder ? 'pre' : 'stock'}">${preorder ? '預購' : '現貨'}</p><h3><a href="product.html?id=${encodeURIComponent(product.id)}">${escapeHtml(product.name)}</a></h3>${release}<div class="price-row"><span class="price-stack">${price}</span><button class="add" data-product-id="${escapeHtml(product.id)}" data-name="${escapeHtml(product.name)}" data-price="${due}" data-type="${escapeHtml(type)}" ${disabled ? 'disabled' : ''}><i data-lucide="plus"></i><span>${disabled ? '暫時缺貨' : preorder ? `訂金 ${money(due)}` : '加入購物車'}</span></button></div></div></article>`;
+  return `<article class="product-card" data-category="${escapeHtml(product.category || 'booster')}"><a class="product-art ${product.imageUrl ? 'photo-card' : 'art-mecha'}" href="product.html?id=${encodeURIComponent(product.id)}">${image}</a><div class="product-meta"><p class="tag ${preorder ? 'pre' : 'stock'}">${preorder ? '預購' : '現貨'}</p><h3><a href="product.html?id=${encodeURIComponent(product.id)}">${escapeHtml(product.name)}</a></h3>${release}<div class="price-row"><span class="price-stack">${price}</span><button class="add" data-product-id="${escapeHtml(product.id)}" data-name="${escapeHtml(product.name)}" data-price="${due}" data-max-quantity="${preorder ? 10 : product.availableStock}" data-type="${escapeHtml(type)}" ${disabled ? 'disabled' : ''}><i data-lucide="plus"></i><span>${disabled ? '暫時缺貨' : preorder ? `訂金 ${money(due)}` : '加入購物車'}</span></button></div></div></article>`;
 }
 async function fetchPublic(path) {
   const response = await fetch(`${apiBase}${path}`);
@@ -93,7 +94,7 @@ searchInput.addEventListener('input', () => renderSearchResults(searchInput.valu
 searchResults.addEventListener('click', () => searchDialog.close());
 document.querySelector('.cart-close').addEventListener('click', () => setCart(false));
 scrim.addEventListener('click', () => setCart(false));
-items.addEventListener('click', event => { const removeIndex = event.target.dataset.remove; const quantityIndex = event.target.dataset.quantity; if (removeIndex !== undefined) { cart.splice(Number(removeIndex), 1); renderCart(); } else if (quantityIndex !== undefined) { const item = cart[Number(quantityIndex)]; if (!item) return; item.quantity = Math.max(1, Math.min(10, item.quantity + Number(event.target.dataset.change))); renderCart(); } });
+items.addEventListener('click', event => { const removeIndex = event.target.dataset.remove; const quantityIndex = event.target.dataset.quantity; if (removeIndex !== undefined) { cart.splice(Number(removeIndex), 1); renderCart(); } else if (quantityIndex !== undefined) { const item = cart[Number(quantityIndex)]; if (!item) return; item.quantity = Math.max(1, Math.min(item.maxQuantity, item.quantity + Number(event.target.dataset.change))); renderCart(); } });
 document.querySelector('.menu-button').addEventListener('click', event => {
   const nav = document.querySelector('.main-nav'); nav.classList.toggle('open'); event.currentTarget.setAttribute('aria-expanded', String(nav.classList.contains('open')));
 });
