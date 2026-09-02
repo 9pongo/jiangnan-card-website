@@ -1,3 +1,5 @@
+document.head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="../brand-logo.css">');
+
 const demoBanners = [
   { id: 'bnr-001', name: '九月會員日：卡牌周邊 9 折', owner: '江南寶卡', type: 'store', placement: '首頁主視覺', period: '09/01 - 09/30', impressions: '12,840', clicks: '622', status: '發布中', image: 'https://images.unsplash.com/photo-1703023689733-6a4281149189?auto=format&fit=crop&w=180&q=70' },
   { id: 'bnr-002', name: '星潮玩具新品活動', owner: '星潮玩具', type: 'external', placement: '首頁橫幅 970 × 250', period: '09/02 - 09/16', impressions: '8,120', clicks: '188', status: '待審核', image: 'https://images.unsplash.com/photo-1575767931088-5cb5e584d6bc?auto=format&fit=crop&w=180&q=70' }

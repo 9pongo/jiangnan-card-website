@@ -1,3 +1,5 @@
+document.head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="brand-logo.css">');
+
 const apiBase = String(window.JIANGNAN_API_BASE || '').replace(/\/$/, '');
 const formatter = new Intl.NumberFormat('zh-TW');
 const query = new URLSearchParams(location.search);
