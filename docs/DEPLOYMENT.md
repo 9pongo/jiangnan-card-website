@@ -56,6 +56,12 @@ docker compose up --build
 2. 公開首頁會讀取已發布商品、公告、活動與 Banner。商品詳細頁使用 `product.html?id={uuid}`，公告與活動詳細頁使用 `post.html?slug={slug}`。
 3. API 必須以 `PUBLIC_ORIGIN` 僅允許正式官網來源的 CORS 請求。GitHub Pages 是展示用途，`runtime-config.js` 保持空值，不可連到正式訂單 API。
 
+## 後台 SSO 連線
+
+1. 正式後台部署時，將 `window.JIANGNAN_ADMIN_API_BASE` 設為 HTTPS API origin，並由公司 OIDC 用戶端提供 `window.JIANGNAN_GET_ACCESS_TOKEN` 非同步函式；函式只能回傳短效 access token，不能將使用者密碼、client secret 或雲端金鑰寫入瀏覽器。
+2. 後台 API 用戶端僅以 `Authorization: Bearer` 傳送該 token。API 會以 `external_subject` 對應資料庫角色並拒絕未知帳號；不能使用前端傳來的角色名稱授權。
+3. 若以上兩項任一未設定，後台會保持展示模式。GitHub Pages 的 `/admin/` 不是正式管理後台，不能填入正式 API 網址或存取權杖。
+
 ## 資料庫遷移
 
 新資料庫容器會依序套用 `001_initial.sql`、`002_banner_workflow.sql` 與種子資料。正式環境必須由 CI/CD 在部署前以受管的遷移工作執行相同 SQL，並記錄執行版本；不得依賴應用程式啟動時自動變更資料庫結構。

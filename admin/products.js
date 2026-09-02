@@ -1,1 +1,25 @@
-const products=[{sku:'PK-SV-BOX-001',name:'寶可夢 SV 系列擴充包 BOX',kind:'預購',price:'NT$ 1,490',detail:'訂金 NT$ 745 ・ 12/01 到貨',status:'上架'},{sku:'PK-RANDOM-001',name:'寶可夢隨機卡包組',kind:'現貨',price:'NT$ 680',detail:'可售 24 件',status:'上架'},{sku:'CARD-CARE-001',name:'收藏卡保護套組',kind:'現貨',price:'NT$ 390',detail:'可售 4 件',status:'上架'}];const table=document.querySelector('#product-table'),dialog=document.querySelector('#product-dialog'),toast=document.querySelector('.toast');function render(){table.innerHTML=products.map(p=>`<tr><td><b>${p.name}</b><small> ${p.sku}</small></td><td>${p.kind}</td><td><b>${p.price}</b></td><td>${p.detail}</td><td><span class="status live">${p.status}</span></td><td><button class="actions">⋮</button></td></tr>`).join('')}function message(t){toast.textContent=t;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2600)}render();document.querySelectorAll('#open-product,#open-product-2').forEach(b=>b.addEventListener('click',()=>dialog.showModal()));document.querySelector('#product-kind').addEventListener('change',e=>{const pre=e.target.value==='preorder';document.querySelector('#deposit-field').hidden=!pre;document.querySelector('#release-field').hidden=!pre;document.querySelector('#stock-field').hidden=pre});document.querySelector('#product-form').addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.currentTarget),pre=f.get('kind')==='preorder';products.unshift({sku:f.get('sku'),name:f.get('name'),kind:pre?'預購':'現貨',price:`NT$ ${Number(f.get('price')).toLocaleString('zh-TW')}`,detail:pre?`訂金 NT$ ${Number(f.get('deposit')).toLocaleString('zh-TW')} ・ ${f.get('releaseDate')} 到貨`:`可售 ${f.get('stock')} 件`,status:f.get('status')==='published'?'上架':'草稿'});render();dialog.close();e.currentTarget.reset();message('商品已儲存；正式 API 已提供上架與更新端點。')});
+const demoProducts = [{ sku: 'PK-SV-BOX-001', name: '寶可夢 SV 系列擴充包 BOX', kind: 'preorder', priceCents: 1490, depositCents: 745, releaseDate: '2026-12-01', status: 'published' }, { sku: 'PK-RANDOM-001', name: '寶可夢隨機卡包組', kind: 'in_stock', priceCents: 680, availableStock: 24, status: 'published' }];
+let products = demoProducts;
+const table = document.querySelector('#product-table');
+const dialog = document.querySelector('#product-dialog');
+const toast = document.querySelector('.toast');
+const api = window.JiangnanAdminApi;
+const state = document.querySelector('[data-connection-state]');
+const money = value => `NT$ ${Number(value).toLocaleString('zh-TW')}`;
+const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
+function message(value) { toast.textContent = value; toast.classList.add('show'); clearTimeout(message.timeout); message.timeout = setTimeout(() => toast.classList.remove('show'), 2600); }
+function render() { table.innerHTML = products.map(p => `<tr><td><b>${esc(p.name)}</b><small> ${esc(p.sku)}</small></td><td>${p.kind === 'preorder' ? '預購' : '現貨'}</td><td><b>${money(p.priceCents)}</b></td><td>${p.kind === 'preorder' ? `訂金 ${money(p.depositCents)} ・ ${esc(String(p.releaseDate).slice(0, 10))} 到貨` : `可售 ${p.availableStock} 件`}</td><td><span class="status ${p.status === 'published' ? 'live' : ''}">${p.status === 'published' ? '上架' : p.status === 'archived' ? '已封存' : '草稿'}</span></td><td><button class="actions" aria-label="商品操作">⋮</button></td></tr>`).join(''); }
+async function refresh() { products = await api.listProducts(); render(); }
+render();
+document.querySelectorAll('#open-product,#open-product-2').forEach(button => button.addEventListener('click', () => dialog.showModal()));
+document.querySelector('#product-kind').addEventListener('change', event => { const preorder = event.target.value === 'preorder'; document.querySelector('#deposit-field').hidden = !preorder; document.querySelector('#release-field').hidden = !preorder; document.querySelector('#stock-field').hidden = preorder; });
+document.querySelector('#product-form').addEventListener('submit', async event => {
+  event.preventDefault(); const form = new FormData(event.currentTarget); const preorder = form.get('kind') === 'preorder';
+  const input = { sku: form.get('sku'), name: form.get('name'), kind: form.get('kind'), priceCents: Number(form.get('price')), depositCents: preorder ? Number(form.get('deposit')) : null, availableStock: preorder ? null : Number(form.get('stock')), releaseDate: preorder ? form.get('releaseDate') : null, imageUrl: null, status: form.get('status') };
+  try {
+    if (api.enabled) { await api.createProduct(input); await refresh(); state.textContent = '已連線正式 API：商品資料依 OIDC 權限讀取與寫入。'; state.classList.add('connected'); message('商品已由正式 API 儲存。'); }
+    else { products.unshift(input); render(); message('展示資料已儲存。'); }
+    dialog.close(); event.currentTarget.reset();
+  } catch (error) { message(error.message || '商品儲存失敗。'); }
+});
+if (api.enabled) refresh().then(() => { state.textContent = '已連線正式 API：商品資料依 OIDC 權限讀取。'; state.classList.add('connected'); }).catch(error => { state.textContent = `無法連線正式 API：${error.message}`; state.classList.add('failed'); });
