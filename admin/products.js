@@ -34,6 +34,9 @@ document.querySelectorAll('#open-product,#open-product-2').forEach(button => but
 document.querySelector('#product-kind').addEventListener('change', event => setKindFields(event.target.value));
 document.querySelector('#product-form').addEventListener('submit', async event => {
   event.preventDefault(); const form = new FormData(event.currentTarget); const preorder = form.get('kind') === 'preorder';
+  const price = Number(form.get('price'));
+  const deposit = Number(form.get('deposit'));
+  if (preorder && deposit > price) return message('預購訂金不可高於售價，請確認金額。');
   const input = { sku: form.get('sku'), name: form.get('name'), kind: form.get('kind'), category: form.get('category'), priceCents: Number(form.get('price')), originalPriceCents: form.get('originalPrice') ? Number(form.get('originalPrice')) : null, depositCents: preorder ? Number(form.get('deposit')) : null, availableStock: preorder ? null : Number(form.get('stock')), releaseDate: preorder ? form.get('releaseDate') : null, imageUrl: form.get('imageUrl') || null, status: form.get('status') };
   try {
     if (api.enabled) { const result = editingProductId ? await api.updateProduct(editingProductId, input) : await api.createProduct(input); await refresh(); state.textContent = '已連線正式 API：商品資料依 OIDC 權限讀取與寫入。'; state.classList.add('connected'); message(result.pendingChangeId || result.status === 'pending_review' ? '商品價格已送交審核。' : '商品已由正式 API 儲存。'); }
