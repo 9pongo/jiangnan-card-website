@@ -46,6 +46,7 @@
 4. 每個商品同時只能有一筆待審變更。若店員需要更正已送審的價格，應由具審核權者處理原提案後再提交，避免兩筆價格提案互相覆蓋。
 5. 提案人可撤回自己的待審變更；具 `product:approve` 權限且非提案人的審核者可駁回並填寫原因。撤回、駁回原因、核准人與時間都會保留在提案與 `audit_log`，不會改寫原本公開商品價格。
 6. 商品管理頁透過 `GET /api/v1/admin/products/:id/change-history` 顯示唯讀調價歷程。此 API 需要 `product:view`，只回傳伺服器保存的提案與審核資訊，不接受前台傳回的稽核內容。
+7. 每項商品必須設定分類：`booster`（卡包）、`single_card`（單卡）、`accessories`（卡牌周邊）或 `toy_model`（玩具模型）。分類會隨商品提案一起審核，公開 API 回傳相同欄位供前台篩選；既有未含分類的提案會以 `booster` 相容處理。
 
 ## 寄售案件作業
 
@@ -70,6 +71,13 @@
 ```powershell
 cd outputs
 docker compose up --build
+```
+
+既有本機資料庫升級時，依序套用新的 SQL migration，例如：
+
+```powershell
+docker compose exec -T db psql -U jiangnan_card -d jiangnan_card -f /docker-entrypoint-initdb.d/014_product_categories.sql
+docker compose up -d --build api
 ```
 
 - 公開網站：`http://localhost:4173/`

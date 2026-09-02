@@ -56,7 +56,7 @@ function productMarkup(product, index) {
   const release = preorder ? `<p class="release">預計 ${escapeHtml(product.releaseDate || '待公告')} 到貨</p>` : `<p class="release">${product.availableStock > 0 ? `庫存 ${product.availableStock} 件` : '目前缺貨'}</p>`;
   const disabled = !preorder && product.availableStock < 1;
   const price = product.originalPriceCents ? `<span class="original-price">${money(product.originalPriceCents)}</span><b class="sale-price">${money(product.priceCents)}</b>` : `<b>${money(product.priceCents)}</b>`;
-  return `<article class="product-card"><a class="product-art ${product.imageUrl ? 'photo-card' : 'art-mecha'}" href="product.html?id=${encodeURIComponent(product.id)}">${image}</a><div class="product-meta"><p class="tag ${preorder ? 'pre' : 'stock'}">${preorder ? '預購' : '現貨'}</p><h3><a href="product.html?id=${encodeURIComponent(product.id)}">${escapeHtml(product.name)}</a></h3>${release}<div class="price-row"><span class="price-stack">${price}</span><button class="add" data-product-id="${escapeHtml(product.id)}" data-name="${escapeHtml(product.name)}" data-price="${due}" data-type="${escapeHtml(type)}" ${disabled ? 'disabled' : ''}><i data-lucide="plus"></i><span>${disabled ? '暫時缺貨' : preorder ? `訂金 ${money(due)}` : '加入購物車'}</span></button></div></div></article>`;
+  return `<article class="product-card" data-category="${escapeHtml(product.category || 'booster')}"><a class="product-art ${product.imageUrl ? 'photo-card' : 'art-mecha'}" href="product.html?id=${encodeURIComponent(product.id)}">${image}</a><div class="product-meta"><p class="tag ${preorder ? 'pre' : 'stock'}">${preorder ? '預購' : '現貨'}</p><h3><a href="product.html?id=${encodeURIComponent(product.id)}">${escapeHtml(product.name)}</a></h3>${release}<div class="price-row"><span class="price-stack">${price}</span><button class="add" data-product-id="${escapeHtml(product.id)}" data-name="${escapeHtml(product.name)}" data-price="${due}" data-type="${escapeHtml(type)}" ${disabled ? 'disabled' : ''}><i data-lucide="plus"></i><span>${disabled ? '暫時缺貨' : preorder ? `訂金 ${money(due)}` : '加入購物車'}</span></button></div></div></article>`;
 }
 async function fetchPublic(path) {
   const response = await fetch(`${apiBase}${path}`);
@@ -78,7 +78,7 @@ async function hydratePublicContent() {
     const news = content.filter(post => post.kind !== 'event').slice(0, 3);
     const newsTarget = document.querySelector('[data-api-news]');
     if (newsTarget && news.length) newsTarget.innerHTML = news.map(post => `<a href="post.html?slug=${encodeURIComponent(post.slug)}"><span>${post.kind === 'promotion' ? '優惠' : '公告'}</span><h3>${escapeHtml(post.title)}</h3><p>${post.startsAt ? new Date(post.startsAt).toLocaleDateString('zh-TW').replaceAll('/', '.') : '最新消息'}</p></a>`).join('');
-    updateSearchIndex(products, content); renderIcons();
+    updateSearchIndex(products, content); applyStockFilter(); renderIcons();
   } catch (error) { console.warn('Public API unavailable; showing preview content.', error); }
 }
 
@@ -93,7 +93,15 @@ items.addEventListener('click', event => { const index = event.target.dataset.re
 document.querySelector('.menu-button').addEventListener('click', event => {
   const nav = document.querySelector('.main-nav'); nav.classList.toggle('open'); event.currentTarget.setAttribute('aria-expanded', String(nav.classList.contains('open')));
 });
-document.querySelectorAll('.filter button:not([disabled])').forEach(button => button.addEventListener('click', () => { document.querySelector('.filter .selected').classList.remove('selected'); button.classList.add('selected'); }));
+let selectedStockCategory = 'all';
+function applyStockFilter() { const cards = [...document.querySelectorAll('.stock-layout .product-card')]; cards.forEach(card => { card.hidden = selectedStockCategory !== 'all' && card.dataset.category !== selectedStockCategory; }); const grid = document.querySelector('[data-api-products="in_stock"]'); if (!grid) return; let empty = grid.querySelector('.filter-empty'); if (!empty) { empty = document.createElement('p'); empty.className = 'filter-empty'; empty.textContent = '此分類目前沒有現貨商品。'; grid.append(empty); } empty.hidden = cards.some(card => !card.hidden); }
+const stockFilter = document.querySelector('.filter');
+if (stockFilter) {
+  const categories = ['all', 'booster', 'single_card', 'accessories'];
+  stockFilter.querySelectorAll('button').forEach((button, index) => { button.disabled = false; button.dataset.category = categories[index]; });
+  stockFilter.insertAdjacentHTML('beforeend', '<button type="button" data-category="toy_model">玩具模型</button>');
+  stockFilter.addEventListener('click', event => { const button = event.target.closest('button[data-category]'); if (!button) return; stockFilter.querySelector('.selected')?.classList.remove('selected'); button.classList.add('selected'); selectedStockCategory = button.dataset.category; applyStockFilter(); });
+}
 const consignDialog = document.querySelector('.consign-dialog');
 const checkoutDialog = document.querySelector('.checkout-dialog');
 document.querySelector('#consign-button').addEventListener('click', () => consignDialog.showModal());
@@ -116,6 +124,8 @@ checkoutDialog.querySelector('form').addEventListener('submit', async event => {
 });
 
 renderCart();
+['booster', 'single_card', 'accessories', 'toy_model', 'accessories'].forEach((category, index) => { const card = document.querySelectorAll('.product-card')[index]; if (card) card.dataset.category = category; });
 updateSearchIndex([...document.querySelectorAll('.product-card')].map((card, index) => ({ id: `preview-${index}`, name: card.querySelector('h3')?.textContent?.trim() || '', kind: card.querySelector('.tag')?.textContent?.trim() === '預購' ? 'preorder' : 'in_stock', href: card.closest('[data-api-products="preorder"]') ? '#new' : '#stock' })), [...document.querySelectorAll('.news-grid a')].map((link, index) => ({ slug: `preview-news-${index}`, kind: link.querySelector('span')?.textContent?.trim() === '活動' ? 'event' : 'notice', title: link.querySelector('h3')?.textContent?.trim() || '', summary: link.querySelector('p')?.textContent?.trim() || '', href: '#news' })));
+applyStockFilter();
 renderIcons();
 hydratePublicContent();
