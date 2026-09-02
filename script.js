@@ -9,6 +9,10 @@ const checkout = document.querySelector('.checkout');
 const formatter = new Intl.NumberFormat('zh-TW');
 const dateFormatter = new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric' });
 const toast = document.querySelector('.toast');
+const searchDialog = document.querySelector('.search-dialog');
+const searchInput = document.querySelector('.search-input');
+const searchResults = document.querySelector('.search-results');
+let searchableItems = [];
 
 function renderIcons() { window.lucide?.createIcons(); }
 function showToast(message) {
@@ -19,6 +23,17 @@ function showToast(message) {
 }
 function money(value) { return `NT$ ${formatter.format(value)}`; }
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character])); }
+function updateSearchIndex(products = [], content = []) {
+  searchableItems = [
+    ...products.map(product => ({ kind: '商品', title: product.name, description: product.kind === 'preorder' ? '預購商品' : '現貨商品', href: product.href || `product.html?id=${encodeURIComponent(product.id)}` })),
+    ...content.map(post => ({ kind: post.kind === 'event' ? '活動' : post.kind === 'promotion' ? '優惠' : '公告', title: post.title, description: post.summary, href: post.href || `post.html?slug=${encodeURIComponent(post.slug)}` }))
+  ];
+}
+function renderSearchResults(query = '') {
+  const term = query.trim().toLocaleLowerCase('zh-TW');
+  const matches = term ? searchableItems.filter(item => `${item.title} ${item.description} ${item.kind}`.toLocaleLowerCase('zh-TW').includes(term)).slice(0, 8) : [];
+  searchResults.innerHTML = !term ? '<p class="search-hint">輸入關鍵字，搜尋商品、活動與公告。</p>' : matches.length ? matches.map(item => `<a class="search-result" href="${item.href}"><span class="search-kind">${item.kind}</span><span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.description || '')}</p></span><span class="search-arrow">→</span></a>`).join('') : '<p class="search-hint">找不到相符內容，請換個關鍵字試試。</p>';
+}
 function renderCart() {
   items.innerHTML = cart.length ? cart.map((item, index) => `<article class="cart-item"><div><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.type)}</small></div><div><b>${money(item.price)}</b><button data-remove="${index}">移除</button></div></article>`).join('') : '<p class="empty">尚未加入商品</p>';
   const amount = cart.reduce((sum, item) => sum + item.price, 0);
@@ -63,12 +78,15 @@ async function hydratePublicContent() {
     const news = content.filter(post => post.kind !== 'event').slice(0, 3);
     const newsTarget = document.querySelector('[data-api-news]');
     if (newsTarget && news.length) newsTarget.innerHTML = news.map(post => `<a href="post.html?slug=${encodeURIComponent(post.slug)}"><span>${post.kind === 'promotion' ? '優惠' : '公告'}</span><h3>${escapeHtml(post.title)}</h3><p>${post.startsAt ? new Date(post.startsAt).toLocaleDateString('zh-TW').replaceAll('/', '.') : '最新消息'}</p></a>`).join('');
-    renderIcons();
+    updateSearchIndex(products, content); renderIcons();
   } catch (error) { console.warn('Public API unavailable; showing preview content.', error); }
 }
 
 document.addEventListener('click', event => { const addButton = event.target.closest('.add'); if (addButton && !addButton.disabled) addToCart(addButton); });
 document.querySelectorAll('.cart-trigger').forEach(button => button.addEventListener('click', () => setCart(true)));
+document.querySelector('.search-trigger').addEventListener('click', () => { searchDialog.showModal(); searchInput.focus(); });
+searchInput.addEventListener('input', () => renderSearchResults(searchInput.value));
+searchResults.addEventListener('click', () => searchDialog.close());
 document.querySelector('.cart-close').addEventListener('click', () => setCart(false));
 scrim.addEventListener('click', () => setCart(false));
 items.addEventListener('click', event => { const index = event.target.dataset.remove; if (index !== undefined) { cart.splice(Number(index), 1); renderCart(); } });
@@ -98,5 +116,6 @@ checkoutDialog.querySelector('form').addEventListener('submit', async event => {
 });
 
 renderCart();
+updateSearchIndex([...document.querySelectorAll('.product-card')].map((card, index) => ({ id: `preview-${index}`, name: card.querySelector('h3')?.textContent?.trim() || '', kind: card.querySelector('.tag')?.textContent?.trim() === '預購' ? 'preorder' : 'in_stock', href: card.closest('[data-api-products="preorder"]') ? '#new' : '#stock' })), [...document.querySelectorAll('.news-grid a')].map((link, index) => ({ slug: `preview-news-${index}`, kind: link.querySelector('span')?.textContent?.trim() === '活動' ? 'event' : 'notice', title: link.querySelector('h3')?.textContent?.trim() || '', summary: link.querySelector('p')?.textContent?.trim() || '', href: '#news' })));
 renderIcons();
 hydratePublicContent();
