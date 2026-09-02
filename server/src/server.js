@@ -21,6 +21,10 @@ const publicConsignmentInput=z.object({sellerName:z.string().trim().min(1).max(8
 const checkoutInput=z.object({idempotencyKey:z.string().uuid(),customerEmail:z.string().email().max(254),items:z.array(z.object({productId:z.string().uuid(),quantity:z.number().int().min(1).max(10)})).min(1).max(20)}).superRefine((value,ctx)=>{const ids=new Set();for(const item of value.items){if(ids.has(item.productId))ctx.addIssue({code:'custom',message:'同一商品不可重複出現在訂單明細。',path:['items']});ids.add(item.productId);}});
 const publicSubmissionAttempts = new Map();
 
+app.param('id', (req, _res, next, value) => {
+  try { req.params.id = z.string().uuid().parse(value); next(); }
+  catch (error) { next(error); }
+});
 app.disable('x-powered-by');
 app.use((_req,res,next) => { res.setHeader('X-Content-Type-Options','nosniff'); res.setHeader('Referrer-Policy','strict-origin-when-cross-origin'); res.setHeader('X-Frame-Options','DENY'); res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()'); if (process.env.NODE_ENV === 'production') res.setHeader('Strict-Transport-Security','max-age=31536000; includeSubDomains'); next(); });
 app.use(cors({ origin: process.env.PUBLIC_ORIGIN?.split(',') ?? false }));
