@@ -46,6 +46,11 @@
 5. 提案人可撤回自己的待審變更；具 `product:approve` 權限且非提案人的審核者可駁回並填寫原因。撤回、駁回原因、核准人與時間都會保留在提案與 `audit_log`，不會改寫原本公開商品價格。
 6. 商品管理頁透過 `GET /api/v1/admin/products/:id/change-history` 顯示唯讀調價歷程。此 API 需要 `product:view`，只回傳伺服器保存的提案與審核資訊，不接受前台傳回的稽核內容。
 
+## 寄售案件作業
+
+1. 寄售案件的作業狀態僅允許 `submitted → received → listed → returned`，或在收件前 `submitted → cancelled`；每次變更均由 API 驗證前一狀態並寫入稽核紀錄。
+2. 後台不提供手動標記「售出」或手動結算寄售款項。這兩個動作必須由付款、庫存與對帳流程以可重試且可稽核的交易處理，避免單一後台按鈕造成卡片與款項狀態不一致。
+
 ## Banner 顯示規則
 
 1. 僅選擇 `published` 或 `scheduled`，且目前位於 `starts_at` 與 `ends_at` 期間的素材。

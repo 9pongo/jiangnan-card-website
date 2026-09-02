@@ -4,4 +4,5 @@
 textarea{border:1px solid var(--line);background:#fff;border-radius:4px;padding:10px;min-height:150px;resize:vertical;font:13px "Noto Sans TC";color:var(--ink)}
 .pending-price,.review-note{display:block;color:#a76500;font-size:.78rem;font-weight:700;margin-top:.35rem}
 .product-actions{display:flex;gap:6px;align-items:center}.product-actions .ghost{padding:7px 9px;font-size:11px}
+.case-actions{display:flex;gap:6px;align-items:center}.case-actions .ghost{padding:7px 9px;font-size:11px}.case-actions small{color:var(--muted)}
 .history-list{padding:8px 28px 24px;display:grid;gap:10px;max-height:55vh;overflow:auto}.history-list article{border-left:3px solid var(--gold);padding:10px 12px;background:#fbfaf7}.history-list article b,.history-list article span,.history-list article small{display:block}.history-list article span{font-weight:800;margin:5px 0}.history-list article small{color:var(--muted);font-size:11px;margin-top:3px}.history-list article p,.empty-history{margin:8px 0 0;color:#735d24;line-height:1.55;font-size:12px}.empty-history{padding:18px 0}
