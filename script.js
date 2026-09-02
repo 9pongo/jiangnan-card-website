@@ -35,16 +35,20 @@ function renderSearchResults(query = '') {
   searchResults.innerHTML = !term ? '<p class="search-hint">輸入關鍵字，搜尋商品、活動與公告。</p>' : matches.length ? matches.map(item => `<a class="search-result" href="${item.href}"><span class="search-kind">${item.kind}</span><span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.description || '')}</p></span><span class="search-arrow">→</span></a>`).join('') : '<p class="search-hint">找不到相符內容，請換個關鍵字試試。</p>';
 }
 function renderCart() {
-  items.innerHTML = cart.length ? cart.map((item, index) => `<article class="cart-item"><div><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.type)}</small></div><div><b>${money(item.price)}</b><button data-remove="${index}">移除</button></div></article>`).join('') : '<p class="empty">尚未加入商品</p>';
-  const amount = cart.reduce((sum, item) => sum + item.price, 0);
+  items.innerHTML = cart.length ? cart.map((item, index) => `<article class="cart-item"><div><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.type)}</small></div><div class="cart-line-price"><b>${money(item.price * item.quantity)}</b><div class="cart-quantity" aria-label="${escapeHtml(item.name)} 數量"><button data-quantity="${index}" data-change="-1" aria-label="減少數量" ${item.quantity <= 1 ? 'disabled' : ''}>−</button><span>${item.quantity}</span><button data-quantity="${index}" data-change="1" aria-label="增加數量" ${item.quantity >= 10 ? 'disabled' : ''}>+</button></div><button class="cart-remove" data-remove="${index}">移除</button></div></article>`).join('') : '<p class="empty">尚未加入商品</p>';
+  const amount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   total.textContent = money(amount);
-  count.textContent = cart.length;
-  count.classList.toggle('has-items', cart.length > 0);
+  const quantity = cart.reduce((sum, item) => sum + item.quantity, 0);
+  count.textContent = quantity;
+  count.classList.toggle('has-items', quantity > 0);
   checkout.disabled = cart.length === 0;
 }
 function setCart(open) { panel.classList.toggle('open', open); scrim.classList.toggle('open', open); panel.setAttribute('aria-hidden', String(!open)); }
 function addToCart(button) {
-  cart.push({ id: button.dataset.productId || null, name: button.dataset.name, price: Number(button.dataset.price), type: button.dataset.type });
+  const id = button.dataset.productId || null;
+  const existing = cart.find(item => (id && item.id === id) || (!id && item.name === button.dataset.name && item.type === button.dataset.type));
+  if (existing) { existing.quantity = Math.min(existing.quantity + 1, 10); if (existing.quantity === 10) showToast('單一商品最多可購買 10 件。'); }
+  else cart.push({ id, name: button.dataset.name, price: Number(button.dataset.price), type: button.dataset.type, quantity: 1 });
   renderCart();
   setCart(true);
 }
@@ -89,7 +93,7 @@ searchInput.addEventListener('input', () => renderSearchResults(searchInput.valu
 searchResults.addEventListener('click', () => searchDialog.close());
 document.querySelector('.cart-close').addEventListener('click', () => setCart(false));
 scrim.addEventListener('click', () => setCart(false));
-items.addEventListener('click', event => { const index = event.target.dataset.remove; if (index !== undefined) { cart.splice(Number(index), 1); renderCart(); } });
+items.addEventListener('click', event => { const removeIndex = event.target.dataset.remove; const quantityIndex = event.target.dataset.quantity; if (removeIndex !== undefined) { cart.splice(Number(removeIndex), 1); renderCart(); } else if (quantityIndex !== undefined) { const item = cart[Number(quantityIndex)]; if (!item) return; item.quantity = Math.max(1, Math.min(10, item.quantity + Number(event.target.dataset.change))); renderCart(); } });
 document.querySelector('.menu-button').addEventListener('click', event => {
   const nav = document.querySelector('.main-nav'); nav.classList.toggle('open'); event.currentTarget.setAttribute('aria-expanded', String(nav.classList.contains('open')));
 });
@@ -116,7 +120,7 @@ checkoutDialog.querySelector('form').addEventListener('submit', async event => {
   event.preventDefault();
   const submit = event.currentTarget.querySelector('button[type="submit"]'); submit.disabled = true;
   try {
-    const response = await fetch(`${apiBase}/api/v1/checkout/intents`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idempotencyKey: crypto.randomUUID(), customerEmail: new FormData(event.currentTarget).get('customerEmail'), items: cart.map(item => ({ productId: item.id, quantity: 1 })) }) });
+    const response = await fetch(`${apiBase}/api/v1/checkout/intents`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idempotencyKey: crypto.randomUUID(), customerEmail: new FormData(event.currentTarget).get('customerEmail'), items: cart.map(item => ({ productId: item.id, quantity: item.quantity })) }) });
     const body = await response.json();
     if (!response.ok) throw new Error(body.error || '建立訂單失敗');
     cart.length = 0; renderCart(); checkoutDialog.close(); setCart(false); showToast(`訂單 ${body.data.orderNumber} 已建立，請等待付款服務啟用。`);
