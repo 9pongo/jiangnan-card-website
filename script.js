@@ -90,14 +90,14 @@ async function hydratePublicContent() {
     for (const kind of ['preorder', 'in_stock']) {
       const target = document.querySelector(`[data-api-products="${kind}"]`);
       const selected = products.filter(product => product.kind === kind);
-      if (target && selected.length) target.innerHTML = selected.map(productMarkup).join('');
+      if (target) target.innerHTML = selected.map(productMarkup).join('');
     }
     const events = content.filter(post => post.kind === 'event').slice(0, 2);
     const eventTarget = document.querySelector('[data-api-events]');
-    if (eventTarget && events.length) eventTarget.innerHTML = events.map(post => `<article><span>${post.startsAt ? String(new Date(post.startsAt).getDate()).padStart(2, '0') : '•'}</span><div><b>${post.startsAt ? dateFormatter.format(new Date(post.startsAt)) : '店內活動'}</b><h3><a href="post.html?slug=${encodeURIComponent(post.slug)}">${escapeHtml(post.title)}</a></h3><p>${escapeHtml(post.summary)}</p></div><i data-lucide="arrow-up-right"></i></article>`).join('');
+    if (eventTarget) eventTarget.innerHTML = events.length ? events.map(post => `<article><span>${post.startsAt ? String(new Date(post.startsAt).getDate()).padStart(2, '0') : '•'}</span><div><b>${post.startsAt ? dateFormatter.format(new Date(post.startsAt)) : '店內活動'}</b><h3><a href="post.html?slug=${encodeURIComponent(post.slug)}">${escapeHtml(post.title)}</a></h3><p>${escapeHtml(post.summary)}</p></div><i data-lucide="arrow-up-right"></i></article>`).join('') : '<p class="filter-empty">目前沒有活動。</p>';
     const news = content.filter(post => post.kind !== 'event').slice(0, 3);
     const newsTarget = document.querySelector('[data-api-news]');
-    if (newsTarget && news.length) newsTarget.innerHTML = news.map(post => `<a href="post.html?slug=${encodeURIComponent(post.slug)}"><span>${post.kind === 'promotion' ? '優惠' : '公告'}</span><h3>${escapeHtml(post.title)}</h3><p>${post.startsAt ? new Date(post.startsAt).toLocaleDateString('zh-TW').replaceAll('/', '.') : '最新消息'}</p></a>`).join('');
+    if (newsTarget) newsTarget.innerHTML = news.length ? news.map(post => `<a href="post.html?slug=${encodeURIComponent(post.slug)}"><span>${post.kind === 'promotion' ? '優惠' : '公告'}</span><h3>${escapeHtml(post.title)}</h3><p>${post.startsAt ? new Date(post.startsAt).toLocaleDateString('zh-TW').replaceAll('/', '.') : '最新消息'}</p></a>`).join('') : '<p class="filter-empty">目前沒有公告。</p>';
     updateSearchIndex(products, content); applyStockFilter(); renderIcons();
   } catch (error) { console.warn('Public API unavailable; showing preview content.', error); }
 }
