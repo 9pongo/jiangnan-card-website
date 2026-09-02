@@ -25,6 +25,7 @@
     createContent: input => request('/api/v1/admin/content', { method: 'POST', body: JSON.stringify(input) }),
     listOrders: () => request('/api/v1/admin/orders'),
     listConsignments: () => request('/api/v1/admin/consignments'),
+    createConsignment: input => request('/api/v1/admin/consignments', { method: 'POST', body: JSON.stringify(input) }),
     listUsers: () => request('/api/v1/admin/users'),
     listAuditLog: () => request('/api/v1/admin/audit-log')
   };
