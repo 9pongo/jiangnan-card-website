@@ -25,6 +25,7 @@
     disableBanner: id => request(`/api/v1/admin/banners/${id}/disable`, { method: 'POST' }),
     listProducts: () => request('/api/v1/admin/products'),
     createProduct: input => request('/api/v1/admin/products', { method: 'POST', body: JSON.stringify(input) }),
+    updateProduct: (id, input) => request(`/api/v1/admin/products/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
     approveProduct: id => request(`/api/v1/admin/products/${id}/approve`, { method: 'POST' }),
     listContent: () => request('/api/v1/admin/content'),
     createContent: input => request('/api/v1/admin/content', { method: 'POST', body: JSON.stringify(input) }),

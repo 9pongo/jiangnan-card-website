@@ -17,6 +17,7 @@ services:
       - ./server/db/migrations/006_orders.sql:/docker-entrypoint-initdb.d/006_orders.sql:ro
       - ./server/db/migrations/007_oidc_subject.sql:/docker-entrypoint-initdb.d/007_oidc_subject.sql:ro
       - ./server/db/migrations/008_product_price_review.sql:/docker-entrypoint-initdb.d/008_product_price_review.sql:ro
+      - ./server/db/migrations/009_product_change_proposals.sql:/docker-entrypoint-initdb.d/009_product_change_proposals.sql:ro
       - ./server/db/seed.sql:/docker-entrypoint-initdb.d/002_seed.sql:ro
   api:
     build: ./server
