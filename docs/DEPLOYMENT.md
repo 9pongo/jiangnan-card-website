@@ -50,6 +50,12 @@ docker compose up --build
 
 目前 GitHub Pages 只負責靜態展示；正式 API 與後台需要部署至公司選定的 AWS 或 GCP 帳戶。
 
+## 公開前台設定
+
+1. 將公開官網部署至 CDN 或靜態網站服務，並在發布階段將 `runtime-config.js` 的 `window.JIANGNAN_API_BASE` 覆寫為公開 API 的 HTTPS origin；不要將任何金鑰放入此檔案。
+2. 公開首頁會讀取已發布商品、公告、活動與 Banner。商品詳細頁使用 `product.html?id={uuid}`，公告與活動詳細頁使用 `post.html?slug={slug}`。
+3. API 必須以 `PUBLIC_ORIGIN` 僅允許正式官網來源的 CORS 請求。GitHub Pages 是展示用途，`runtime-config.js` 保持空值，不可連到正式訂單 API。
+
 ## 資料庫遷移
 
 新資料庫容器會依序套用 `001_initial.sql`、`002_banner_workflow.sql` 與種子資料。正式環境必須由 CI/CD 在部署前以受管的遷移工作執行相同 SQL，並記錄執行版本；不得依賴應用程式啟動時自動變更資料庫結構。

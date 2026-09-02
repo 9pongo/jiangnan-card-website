@@ -40,7 +40,7 @@ function productMarkup(product, index) {
   const image = product.imageUrl ? `<img src="${escapeHtml(product.imageUrl)}" alt="${escapeHtml(product.name)}">` : `<span>${String(index + 1).padStart(2, '0')}</span><div class="model-silhouette">${preorder ? 'TCG' : 'CARD'}</div>`;
   const release = preorder ? `<p class="release">預計 ${escapeHtml(product.releaseDate || '待公告')} 到貨</p>` : `<p class="release">${product.availableStock > 0 ? `庫存 ${product.availableStock} 件` : '目前缺貨'}</p>`;
   const disabled = !preorder && product.availableStock < 1;
-  return `<article class="product-card"><div class="product-art ${product.imageUrl ? 'photo-card' : 'art-mecha'}">${image}</div><div class="product-meta"><p class="tag ${preorder ? 'pre' : 'stock'}">${preorder ? '預購' : '現貨'}</p><h3>${escapeHtml(product.name)}</h3>${release}<div class="price-row"><b>${money(product.priceCents)}</b><button class="add" data-product-id="${escapeHtml(product.id)}" data-name="${escapeHtml(product.name)}" data-price="${due}" data-type="${escapeHtml(type)}" ${disabled ? 'disabled' : ''}><i data-lucide="plus"></i><span>${disabled ? '暫時缺貨' : preorder ? `訂金 ${money(due)}` : '加入購物車'}</span></button></div></div></article>`;
+  return `<article class="product-card"><a class="product-art ${product.imageUrl ? 'photo-card' : 'art-mecha'}" href="product.html?id=${encodeURIComponent(product.id)}">${image}</a><div class="product-meta"><p class="tag ${preorder ? 'pre' : 'stock'}">${preorder ? '預購' : '現貨'}</p><h3><a href="product.html?id=${encodeURIComponent(product.id)}">${escapeHtml(product.name)}</a></h3>${release}<div class="price-row"><b>${money(product.priceCents)}</b><button class="add" data-product-id="${escapeHtml(product.id)}" data-name="${escapeHtml(product.name)}" data-price="${due}" data-type="${escapeHtml(type)}" ${disabled ? 'disabled' : ''}><i data-lucide="plus"></i><span>${disabled ? '暫時缺貨' : preorder ? `訂金 ${money(due)}` : '加入購物車'}</span></button></div></div></article>`;
 }
 async function fetchPublic(path) {
   const response = await fetch(`${apiBase}${path}`);
@@ -58,10 +58,10 @@ async function hydratePublicContent() {
     }
     const events = content.filter(post => post.kind === 'event').slice(0, 2);
     const eventTarget = document.querySelector('[data-api-events]');
-    if (eventTarget && events.length) eventTarget.innerHTML = events.map(post => `<article><span>${post.startsAt ? String(new Date(post.startsAt).getDate()).padStart(2, '0') : '•'}</span><div><b>${post.startsAt ? dateFormatter.format(new Date(post.startsAt)) : '店內活動'}</b><h3>${escapeHtml(post.title)}</h3><p>${escapeHtml(post.summary)}</p></div><i data-lucide="arrow-up-right"></i></article>`).join('');
+    if (eventTarget && events.length) eventTarget.innerHTML = events.map(post => `<article><span>${post.startsAt ? String(new Date(post.startsAt).getDate()).padStart(2, '0') : '•'}</span><div><b>${post.startsAt ? dateFormatter.format(new Date(post.startsAt)) : '店內活動'}</b><h3><a href="post.html?slug=${encodeURIComponent(post.slug)}">${escapeHtml(post.title)}</a></h3><p>${escapeHtml(post.summary)}</p></div><i data-lucide="arrow-up-right"></i></article>`).join('');
     const news = content.filter(post => post.kind !== 'event').slice(0, 3);
     const newsTarget = document.querySelector('[data-api-news]');
-    if (newsTarget && news.length) newsTarget.innerHTML = news.map(post => `<a href="#news"><span>${post.kind === 'promotion' ? '優惠' : '公告'}</span><h3>${escapeHtml(post.title)}</h3><p>${post.startsAt ? new Date(post.startsAt).toLocaleDateString('zh-TW').replaceAll('/', '.') : '最新消息'}</p></a>`).join('');
+    if (newsTarget && news.length) newsTarget.innerHTML = news.map(post => `<a href="post.html?slug=${encodeURIComponent(post.slug)}"><span>${post.kind === 'promotion' ? '優惠' : '公告'}</span><h3>${escapeHtml(post.title)}</h3><p>${post.startsAt ? new Date(post.startsAt).toLocaleDateString('zh-TW').replaceAll('/', '.') : '最新消息'}</p></a>`).join('');
     renderIcons();
   } catch (error) { console.warn('Public API unavailable; showing preview content.', error); }
 }
