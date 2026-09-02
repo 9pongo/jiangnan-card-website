@@ -29,6 +29,7 @@
     approveProduct: id => request(`/api/v1/admin/products/${id}/approve`, { method: 'POST' }),
     rejectProduct: (id, reviewNote) => request(`/api/v1/admin/products/${id}/reject`, { method: 'POST', body: JSON.stringify({ reviewNote }) }),
     cancelProductChange: id => request(`/api/v1/admin/products/${id}/cancel-change`, { method: 'POST' }),
+    productChangeHistory: id => request(`/api/v1/admin/products/${id}/change-history`),
     session: () => request('/api/v1/admin/session'),
     listContent: () => request('/api/v1/admin/content'),
     createContent: input => request('/api/v1/admin/content', { method: 'POST', body: JSON.stringify(input) }),
