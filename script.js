@@ -23,6 +23,19 @@ function showToast(message) {
 }
 function money(value) { return `NT$ ${formatter.format(value)}`; }
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character])); }
+function persistCart() { sessionStorage.setItem('jiangnan-cart', JSON.stringify(cart)); }
+function restoreCart() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('jiangnan-cart') || '[]');
+    if (!Array.isArray(saved)) throw new Error('購物車資料格式錯誤');
+    for (const item of saved) {
+      const maxQuantity = Math.max(1, Math.min(10, Number(item.maxQuantity)));
+      const quantity = Math.max(1, Math.min(maxQuantity, Number(item.quantity)));
+      if (typeof item.name !== 'string' || typeof item.type !== 'string' || !Number.isFinite(Number(item.price)) || !Number.isInteger(quantity)) continue;
+      cart.push({ id: typeof item.id === 'string' ? item.id : null, name: item.name, price: Number(item.price), type: item.type, quantity, maxQuantity });
+    }
+  } catch { sessionStorage.removeItem('jiangnan-cart'); }
+}
 function updateSearchIndex(products = [], content = []) {
   searchableItems = [
     ...products.map(product => ({ kind: '商品', title: product.name, description: product.kind === 'preorder' ? '預購商品' : '現貨商品', href: product.href || `product.html?id=${encodeURIComponent(product.id)}` })),
@@ -42,6 +55,7 @@ function renderCart() {
   count.textContent = quantity;
   count.classList.toggle('has-items', quantity > 0);
   checkout.disabled = cart.length === 0;
+  persistCart();
 }
 function setCart(open) { panel.classList.toggle('open', open); scrim.classList.toggle('open', open); panel.setAttribute('aria-hidden', String(!open)); }
 function addCartItem(item) {
@@ -129,6 +143,7 @@ checkoutDialog.querySelector('form').addEventListener('submit', async event => {
   } catch (error) { showToast(error.message || '建立訂單失敗，請稍後再試。'); } finally { submit.disabled = false; }
 });
 
+restoreCart();
 renderCart();
 try {
   const pendingCartItem = JSON.parse(sessionStorage.getItem('jiangnan-cart-pending') || 'null');
