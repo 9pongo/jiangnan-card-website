@@ -16,7 +16,11 @@ async function loadProduct() {
   const preorder = data.kind === 'preorder';
   document.title = `${data.name} | 江南寶卡`;
   view.innerHTML = `<div class="product-detail"><div class="product-art">${data.imageUrl ? `<img src="${esc(data.imageUrl)}" alt="${esc(data.name)}">` : 'TCG'}</div><div class="buy-panel"><p class="eyebrow">${preorder ? 'PRE-ORDER' : 'IN STOCK'}</p><h1>${esc(data.name)}</h1><p class="price">${data.originalPriceCents ? `<del>${money(data.originalPriceCents)}</del> ` : ''}${money(data.priceCents)}</p><div class="meta"><div><span>${preorder ? '預購訂金' : '供應狀態'}</span><b>${preorder ? money(data.depositCents) : data.availableStock > 0 ? '現貨供應中' : '暫時缺貨'}</b></div><div><span>${preorder ? '預計到貨' : '商品編號'}</span><b>${esc(preorder ? data.releaseDate?.slice(0, 10) || '待公告' : data.sku)}</b></div></div><button class="button" ${!preorder && data.availableStock < 1 ? 'disabled' : ''}>${preorder ? '回首頁加入預購訂金' : '回首頁加入購物車'}</button></div></div>`;
-  view.querySelector('.button')?.addEventListener('click', () => { location.href = './#new'; });
+  view.querySelector('.button')?.addEventListener('click', () => {
+    const item = { id: data.id, name: data.name, price: preorder ? data.depositCents : data.priceCents, type: preorder ? `預購訂金，售價 ${money(data.priceCents)}` : '現貨商品', maxQuantity: preorder ? 10 : data.availableStock };
+    sessionStorage.setItem('jiangnan-cart-pending', JSON.stringify(item));
+    location.href = './#new';
+  });
 }
 async function loadPost() {
   const slug = query.get('slug');

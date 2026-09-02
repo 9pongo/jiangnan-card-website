@@ -44,15 +44,16 @@ function renderCart() {
   checkout.disabled = cart.length === 0;
 }
 function setCart(open) { panel.classList.toggle('open', open); scrim.classList.toggle('open', open); panel.setAttribute('aria-hidden', String(!open)); }
-function addToCart(button) {
-  const id = button.dataset.productId || null;
-  const maxQuantity = Math.max(1, Math.min(10, Number(button.dataset.maxQuantity || 10)));
-  const existing = cart.find(item => (id && item.id === id) || (!id && item.name === button.dataset.name && item.type === button.dataset.type));
+function addCartItem(item) {
+  const id = item.id || null;
+  const maxQuantity = Math.max(1, Math.min(10, Number(item.maxQuantity || 10)));
+  const existing = cart.find(current => (id && current.id === id) || (!id && current.name === item.name && current.type === item.type));
   if (existing) { existing.quantity = Math.min(existing.quantity + 1, existing.maxQuantity); if (existing.quantity === existing.maxQuantity) showToast(`此商品最多可加入 ${existing.maxQuantity} 件。`); }
-  else cart.push({ id, name: button.dataset.name, price: Number(button.dataset.price), type: button.dataset.type, quantity: 1, maxQuantity });
+  else cart.push({ id, name: item.name, price: Number(item.price), type: item.type, quantity: 1, maxQuantity });
   renderCart();
   setCart(true);
 }
+function addToCart(button) { addCartItem({ id: button.dataset.productId, name: button.dataset.name, price: button.dataset.price, type: button.dataset.type, maxQuantity: button.dataset.maxQuantity }); }
 function productMarkup(product, index) {
   const preorder = product.kind === 'preorder';
   const due = preorder ? product.depositCents : product.priceCents;
@@ -129,6 +130,10 @@ checkoutDialog.querySelector('form').addEventListener('submit', async event => {
 });
 
 renderCart();
+try {
+  const pendingCartItem = JSON.parse(sessionStorage.getItem('jiangnan-cart-pending') || 'null');
+  if (pendingCartItem) { sessionStorage.removeItem('jiangnan-cart-pending'); addCartItem(pendingCartItem); }
+} catch { sessionStorage.removeItem('jiangnan-cart-pending'); }
 ['booster', 'single_card', 'accessories', 'toy_model', 'accessories'].forEach((category, index) => { const card = document.querySelectorAll('.product-card')[index]; if (card) card.dataset.category = category; });
 updateSearchIndex([...document.querySelectorAll('.product-card')].map((card, index) => ({ id: `preview-${index}`, name: card.querySelector('h3')?.textContent?.trim() || '', kind: card.querySelector('.tag')?.textContent?.trim() === '預購' ? 'preorder' : 'in_stock', href: card.closest('[data-api-products="preorder"]') ? '#new' : '#stock' })), [...document.querySelectorAll('.news-grid a')].map((link, index) => ({ slug: `preview-news-${index}`, kind: link.querySelector('span')?.textContent?.trim() === '活動' ? 'event' : 'notice', title: link.querySelector('h3')?.textContent?.trim() || '', summary: link.querySelector('p')?.textContent?.trim() || '', href: '#news' })));
 applyStockFilter();
