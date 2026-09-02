@@ -23,6 +23,8 @@
     submitBanner: id => request(`/api/v1/admin/banners/${id}/submit`, { method: 'POST' }),
     approveBanner: id => request(`/api/v1/admin/banners/${id}/approve`, { method: 'POST' }),
     disableBanner: id => request(`/api/v1/admin/banners/${id}/disable`, { method: 'POST' }),
+    createBannerUploadIntent: input => request('/api/v1/admin/banner-assets/upload-intents', { method: 'POST', body: JSON.stringify(input) }),
+    completeBannerUpload: id => request(`/api/v1/admin/banner-assets/${id}/complete`, { method: 'POST' }),
     listProducts: () => request('/api/v1/admin/products'),
     createProduct: input => request('/api/v1/admin/products', { method: 'POST', body: JSON.stringify(input) }),
     updateProduct: (id, input) => request(`/api/v1/admin/products/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),

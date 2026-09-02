@@ -24,11 +24,18 @@
 ## 必要安全控制
 
 1. 正式環境設定 `AUTH_MODE=oidc`、`OIDC_ISSUER` 與 `OIDC_AUDIENCE` 後，以公司 SSO 的 OIDC JWT 驗證。`x-demo-role` 僅在 `AUTH_MODE=demo` 可用；正式模式會忽略它。每個 SSO subject 必須先對應至 `users.external_subject`，權限只從資料庫角色取得。
-2. 素材上傳由 API 驗證檔案類型、大小、尺寸後簽發短效 S3／Cloud Storage 上傳網址。瀏覽器與 Git 儲存庫不得保存雲端金鑰。
+2. 素材上傳由 API 驗證檔案類型與大小後簽發短效 S3／Cloud Storage 上傳網址。瀏覽器與 Git 儲存庫不得保存雲端金鑰；實際圖片尺寸與安全掃描須在物件建立事件中驗證。
 3. 第三方廣告由廣告營運建立，店長或管理員核准才能進入 `published`／`scheduled` 狀態。
 4. 所有發布、停用、優先權變更與排程調整寫入 `audit_log`；資料庫觸發器會拒絕 `UPDATE` 和 `DELETE`，稽核表僅能新增。
 5. PostgreSQL 啟用每日備份、時間點還原及異地備援；物件儲存開啟版本控管與生命週期政策。
 6. API 僅經 HTTPS 對外，資料庫只放在私有網路。後台另加 WAF、速率限制與管理網段／SSO 條件。
+
+## Banner 素材上傳
+
+1. 設定 `ASSET_STORAGE_PROVIDER=s3` 或 `gcs`、`ASSET_BUCKET`、`ASSET_PUBLIC_BASE_URL`，並以服務執行身分提供最小權限：建立短效 PUT 簽名、讀取新物件的中繼資料。S3 使用 `AWS_REGION` 與工作負載 IAM Role；GCP 使用 Cloud Run／GKE 的 Workload Identity。不得設定長效 access key 到前端或 Git。
+2. 後台僅允許 PNG、JPG、WebP，檔案最大 5 MB。API 先建立 `banner_assets` 上傳意圖，簽名 URL 五分鐘後失效；瀏覽器直傳物件儲存，API 以伺服器身分驗證物件的 Content-Type 與大小後才允許將該素材建立為 Banner。
+3. S3 bucket 或 Cloud Storage bucket 必須設定 CORS，僅允許正式後台 origin 對短效 PUT URL 發送 `PUT` 與 `Content-Type`。公開素材只經 CDN 的 `ASSET_PUBLIC_BASE_URL` 提供。
+4. 目前完成驗證只核對物件中繼資料；正式上線前仍必須在物件建立事件上串接惡意檔掃描與實際影像格式／尺寸檢查，掃描未通過的素材不得標記為 `uploaded` 或用於發布 Banner。
 
 ## 商品價格與活動價審核
 
