@@ -81,7 +81,7 @@ const checkoutDialog = document.querySelector('.checkout-dialog');
 document.querySelector('#consign-button').addEventListener('click', () => consignDialog.showModal());
 document.querySelectorAll('.dialog-close').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
 document.querySelectorAll('[data-toast]').forEach(button => button.addEventListener('click', () => showToast(button.dataset.toast)));
-consignDialog.querySelector('form').addEventListener('submit', event => { event.preventDefault(); consignDialog.close(); showToast('寄售線上收件將在完成驗證與個資通知後開放，現階段請至門市洽詢。'); });
+consignDialog.querySelector('form').addEventListener('submit', async event => { event.preventDefault(); if (!apiBase) return showToast('此預覽站尚未連接寄售預約服務。'); const form = event.currentTarget; const submit = form.querySelector('button[type="submit"]'); submit.disabled = true; try { const values = new FormData(form); const response = await fetch(`${apiBase}/api/v1/public/consignment-requests`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sellerName: values.get('sellerName'), sellerContact: values.get('sellerContact'), cardDescription: values.get('cardDescription'), privacyConsent: values.get('privacyConsent') === 'on', privacyVersion: '2026-09-local' }) }); const body = await response.json(); if (!response.ok) throw new Error(body.error || '寄售預約送出失敗。'); form.reset(); consignDialog.close(); showToast(`寄售預約 ${body.data.caseNumber} 已送出，請等待門市聯繫。`); } catch (error) { showToast(error.message || '寄售預約送出失敗。'); } finally { submit.disabled = false; } });
 checkout.addEventListener('click', () => {
   if (!apiBase || cart.some(item => !item.id)) return showToast('此預覽站尚未連接正式訂購服務。');
   checkoutDialog.showModal();

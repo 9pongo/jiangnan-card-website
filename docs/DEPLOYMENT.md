@@ -94,4 +94,4 @@ docker compose up --build
 
 ## 資料庫遷移
 
-新資料庫容器會依序套用 `001_initial.sql` 到 `010_product_change_review_note.sql` 與種子資料。正式環境必須由 CI/CD 在部署前以受管的遷移工作執行相同 SQL，並記錄執行版本；不得依賴應用程式啟動時自動變更資料庫結構。
+新資料庫容器會依序套用 `001_initial.sql` 到 `013_public_consignment_submission.sql` 與種子資料。正式環境必須由 CI/CD 在部署前以受管的遷移工作執行相同 SQL，並記錄執行版本；不得依賴應用程式啟動時自動變更資料庫結構。

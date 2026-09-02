@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: jiangnan_card
       POSTGRES_PASSWORD: local-development-only
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./server/db/migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql:ro
@@ -21,20 +21,21 @@ services:
       - ./server/db/migrations/010_product_change_review_note.sql:/docker-entrypoint-initdb.d/010_product_change_review_note.sql:ro
       - ./server/db/migrations/011_banner_assets.sql:/docker-entrypoint-initdb.d/011_banner_assets.sql:ro
       - ./server/db/migrations/012_order_reservation_expiry.sql:/docker-entrypoint-initdb.d/012_order_reservation_expiry.sql:ro
+      - ./server/db/migrations/013_public_consignment_submission.sql:/docker-entrypoint-initdb.d/013_public_consignment_submission.sql:ro
       - ./server/db/seed.sql:/docker-entrypoint-initdb.d/002_seed.sql:ro
   api:
     build: ./server
     environment:
       PORT: 3000
       DATABASE_URL: postgresql://jiangnan_card:local-development-only@db:5432/jiangnan_card
-      PUBLIC_ORIGIN: http://localhost:4173
+      PUBLIC_ORIGIN: http://localhost:4173,http://127.0.0.1:4173
       ORDER_EXPIRY_TOKEN: local-development-only
       ORDER_EXPIRY_ACTOR_ID: 00000000-0000-0000-0000-000000000001
       ASSET_STORAGE_PROVIDER: local
       ASSET_LOCAL_BASE_URL: http://localhost:3000
       ASSET_LOCAL_DIRECTORY: /app/local-banner-assets
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - banner_assets_data:/app/local-banner-assets
     depends_on:

@@ -11,7 +11,7 @@
 ```powershell
 cd outputs
 docker compose up --build
-python -m http.server 4173
+python -m http.server 4173 --bind 127.0.0.1
 ```
 
 | 目標 | 網址 | 預期結果 |
@@ -55,6 +55,7 @@ python -m http.server 4173
 | B-02 | 建立、送審、核准 Banner | 未驗證素材不得建立；草稿 -> 待審 -> 發布／排程；店內活動優先權至少 900 時必須優先於同版位第三方廣告。 |
 | B-03 | 點擊第三方 Banner | 外連使用新分頁與 `noopener sponsored`；事件端點以 UUID event key 去重。 |
 | G-01 | 建立寄售案件 | 產生 `JC-YYYYMMDD-XXXXXX` 案件編號、品項數正確、`consignment.created` 稽核存在。 |
+| G-01a | 從公開寄售表單送出預約 | 必須勾選個資同意；回傳案件編號、建立 `submitted` 案件與「待鑑定」品項，並留下 `consignment.public_submitted` 稽核。 |
 | G-02 | 推進寄售狀態 | 僅允許 `submitted -> received -> listed -> returned`，或 `submitted -> cancelled`；錯誤轉換回 409，狀態不變。 |
 | A-01 | 讀取成員與稽核頁 | 電子信箱遮罩；稽核只讀。直接對 `audit_log` 做 UPDATE 或 DELETE 必須被資料庫拒絕。 |
 
