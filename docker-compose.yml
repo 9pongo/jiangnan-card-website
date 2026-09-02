@@ -30,9 +30,15 @@ services:
       PUBLIC_ORIGIN: http://localhost:4173
       ORDER_EXPIRY_TOKEN: local-development-only
       ORDER_EXPIRY_ACTOR_ID: 00000000-0000-0000-0000-000000000001
+      ASSET_STORAGE_PROVIDER: local
+      ASSET_LOCAL_BASE_URL: http://localhost:3000
+      ASSET_LOCAL_DIRECTORY: /app/local-banner-assets
     ports:
       - "3000:3000"
+    volumes:
+      - banner_assets_data:/app/local-banner-assets
     depends_on:
       - db
 volumes:
   postgres_data:
+  banner_assets_data:

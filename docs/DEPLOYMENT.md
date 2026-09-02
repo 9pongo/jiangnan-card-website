@@ -29,10 +29,11 @@
 4. 所有發布、停用、優先權變更與排程調整寫入 `audit_log`；資料庫觸發器會拒絕 `UPDATE` 和 `DELETE`，稽核表僅能新增。
 5. PostgreSQL 啟用每日備份、時間點還原及異地備援；物件儲存開啟版本控管與生命週期政策。
 6. API 僅經 HTTPS 對外，資料庫只放在私有網路。後台另加 WAF、速率限制與管理網段／SSO 條件。
+7. API 已停用 `X-Powered-By`，並回傳 `nosniff`、點擊框架防護、Referrer Policy 與 Permissions Policy；production 模式加上 HSTS。CDN／反向代理仍須統一施加 HTTPS、WAF 與速率限制，不能以本機 header 取代邊界防護。
 
 ## Banner 素材上傳
 
-1. 設定 `ASSET_STORAGE_PROVIDER=s3` 或 `gcs`、`ASSET_BUCKET`、`ASSET_PUBLIC_BASE_URL`，並以服務執行身分提供最小權限：建立短效 PUT 簽名、讀取新物件的中繼資料。S3 使用 `AWS_REGION` 與工作負載 IAM Role；GCP 使用 Cloud Run／GKE 的 Workload Identity。不得設定長效 access key 到前端或 Git。
+1. 正式環境設定 `ASSET_STORAGE_PROVIDER=s3` 或 `gcs`、`ASSET_BUCKET`、`ASSET_PUBLIC_BASE_URL`，並以服務執行身分提供最小權限：建立短效 PUT 簽名、讀取新物件的中繼資料。S3 使用 `AWS_REGION` 與工作負載 IAM Role；GCP 使用 Cloud Run／GKE 的 Workload Identity。不得設定長效 access key 到前端或 Git。
 2. 後台僅允許 PNG、JPG、WebP，檔案最大 5 MB。API 先建立 `banner_assets` 上傳意圖，簽名 URL 五分鐘後失效；瀏覽器直傳物件儲存，API 以伺服器身分驗證物件的 Content-Type 與大小後才允許將該素材建立為 Banner。
 3. S3 bucket 或 Cloud Storage bucket 必須設定 CORS，僅允許正式後台 origin 對短效 PUT URL 發送 `PUT` 與 `Content-Type`。公開素材只經 CDN 的 `ASSET_PUBLIC_BASE_URL` 提供。
 4. 目前完成驗證只核對物件中繼資料；正式上線前仍必須在物件建立事件上串接惡意檔掃描與實際影像格式／尺寸檢查，掃描未通過的素材不得標記為 `uploaded` 或用於發布 Banner。
@@ -74,6 +75,8 @@ docker compose up --build
 - 公開網站：`http://localhost:4173/`
 - 後台展示：`http://localhost:4173/admin/`
 - API 健康檢查：`http://localhost:3000/health`
+
+本機 compose 預設啟用 `ASSET_STORAGE_PROVIDER=local`，將 Banner 圖片放在 Docker named volume，讓完整上傳、驗證與建立 Banner 的流程可以在不使用雲端憑證下驗收。此 provider 只允許非 production 模式，不能用於正式部署。
 
 目前 GitHub Pages 只負責靜態展示；正式 API 與後台需要部署至公司選定的 AWS 或 GCP 帳戶。
 
