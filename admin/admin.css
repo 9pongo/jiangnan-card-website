@@ -3,3 +3,4 @@
 .connection-state{display:inline-flex;margin:0 0 18px;padding:7px 10px;border:1px solid #d9cda9;background:#fff9e9;color:#735d24;font-size:12px;font-weight:700}.connection-state.connected{border-color:#9ccfc0;background:#e4f4f0;color:#167262}.connection-state.failed{border-color:#e5b0a3;background:#fff0ea;color:#b85034}
 textarea{border:1px solid var(--line);background:#fff;border-radius:4px;padding:10px;min-height:150px;resize:vertical;font:13px "Noto Sans TC";color:var(--ink)}
 .pending-price,.review-note{display:block;color:#a76500;font-size:.78rem;font-weight:700;margin-top:.35rem}
+.product-actions{display:flex;gap:6px;align-items:center}.product-actions .ghost{padding:7px 9px;font-size:11px}
