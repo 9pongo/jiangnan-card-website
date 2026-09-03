@@ -6,6 +6,8 @@ textarea{border:1px solid var(--line);background:#fff;border-radius:4px;padding:
 @media(max-width:700px){.order-toolbar label,.order-toolbar label:first-child{width:100%;max-width:none}}
 .content-toolbar{align-items:end}.content-toolbar label:first-child{flex:1;max-width:420px}.content-toolbar input{width:100%}.content-filter-summary{margin:-8px 0 14px;font-size:12px}
 @media(max-width:700px){.content-toolbar label,.content-toolbar label:first-child{width:100%;max-width:none}}
+.product-toolbar{align-items:end;flex-wrap:wrap}.product-toolbar label:first-child{flex:1;min-width:240px}.product-toolbar input{width:100%}.product-filter-summary{margin:-8px 0 14px;font-size:12px}
+@media(max-width:700px){.product-toolbar label,.product-toolbar label:first-child{width:100%;min-width:0}}
 .pending-price,.review-note{display:block;color:#a76500;font-size:.78rem;font-weight:700;margin-top:.35rem}
 .product-actions{display:flex;gap:6px;align-items:center}.product-actions .ghost{padding:7px 9px;font-size:11px}
 .case-actions{display:flex;gap:6px;align-items:center}.case-actions .ghost{padding:7px 9px;font-size:11px}.case-actions small{color:var(--muted)}
