@@ -1,0 +1,47 @@
+name: Verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  api-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Install server dependencies
+        run: npm ci --prefix server
+      - name: Check JavaScript syntax
+        run: |
+          node --check server/src/server.js
+          node --check admin/admin-api.js
+          node --check admin/products.js
+          node --check admin/content.js
+          node --check admin/orders.js
+          node --check admin/consignment.js
+      - name: Start isolated integration environment
+        run: API_PORT=3300 DB_PORT=55432 docker compose -p jiangnan-ci up -d --build
+      - name: Wait for API health check
+        run: |
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:3300/health && exit 0
+            sleep 2
+          done
+          exit 1
+      - name: Run API integration tests
+        run: API_TEST_BASE=http://127.0.0.1:3300 npm test --prefix server
+      - name: Show API logs on failure
+        if: failure()
+        run: docker compose -p jiangnan-ci logs api db
+      - name: Remove integration environment
+        if: always()
+        run: docker compose -p jiangnan-ci down -v
