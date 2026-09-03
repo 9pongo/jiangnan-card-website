@@ -6,6 +6,12 @@ const money = value => `NT$ ${Number(value).toLocaleString('zh-TW')}`;
 const names = { pending_payment: '待付款', paid: '已付款', cancelled: '已取消', expired: '已逾時', fulfilled: '已履約' };
 const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
 function expiry(value) { return value ? new Date(value).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '未設定'; }
+function inventoryState(order, item) {
+  if (!item.reservedStock) return '預購訂金項目';
+  if (order.status === 'pending_payment') return '現貨庫存保留中';
+  if (order.status === 'expired' || order.status === 'cancelled') return '現貨庫存已釋回';
+  return '現貨庫存已扣除';
+}
 function render(data) { rows.innerHTML = data.map(order => `<tr><td><b>${esc(order.orderNumber)}</b></td><td>${esc(order.customerEmail)}</td><td>${order.itemCount}</td><td><b>${money(order.amountDueCents)}</b></td><td>${order.status === 'pending_payment' ? expiry(order.expiresAt) : '-'}</td><td><span class="status ${order.status === 'pending_payment' ? 'review' : order.status === 'paid' ? 'live' : ''}">${names[order.status] || order.status}</span></td><td>${order.id ? `<button class="ghost" data-detail="${order.id}">明細</button>` : '<small>展示資料</small>'}</td></tr>`).join(''); }
 const header = rows.closest('table').querySelector('thead tr');
 header.insertAdjacentHTML('beforeend', '<th>明細</th>');
@@ -16,7 +22,7 @@ detailDialog.querySelectorAll('button').forEach(button => button.addEventListene
 async function showDetail(id) {
   try {
     const order = await api.orderDetail(id);
-    const lines = order.items.map(item => `<article><b>${esc(item.productName)}</b><span>${item.quantity} 件 ・ 每件 ${money(item.duePerUnitCents)}</span><small>${item.reservedStock ? '現貨庫存已保留' : '預購訂金項目'} ・ 商品售價 ${money(item.unitPriceCents)}</small></article>`).join('');
+    const lines = order.items.map(item => `<article><b>${esc(item.productName)}</b><span>${item.quantity} 件 ・ 每件 ${money(item.duePerUnitCents)}</span><small>${inventoryState(order, item)} ・ 商品售價 ${money(item.unitPriceCents)}</small></article>`).join('');
     detailDialog.querySelector('.history-list').innerHTML = `<article><b>${esc(order.orderNumber)}</b><span>${names[order.status] || order.status} ・ ${money(order.amountDueCents)}</span><small>${esc(order.customerEmail)} ・ 建立於 ${expiry(order.createdAt)}</small></article>${lines || '<p class="empty-history">此訂單沒有品項資料。</p>'}`;
     detailDialog.showModal();
   } catch (error) { state.textContent = `讀取訂單明細失敗：${error.message}`; state.classList.add('failed'); }
