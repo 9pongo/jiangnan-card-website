@@ -35,14 +35,20 @@ render(); document.querySelector('#open').onclick = () => { form.reset(); resetC
 form.onsubmit = async event => { event.preventDefault(); const values = new FormData(event.currentTarget); const input = { sellerName: values.get('name'), sellerContact: values.get('contact'), items: [...itemList.children].map(item => ({ cardName: item.querySelector('[name="cardName"]').value, cardNumber: item.querySelector('[name="cardNumber"]').value || null, cardCondition: item.querySelector('[name="cardCondition"]').value, suggestedPriceCents: Number(item.querySelector('[name="suggestedPrice"]').value) })) }; try { if (api.enabled) { await api.createConsignment(input); await refresh(); state.textContent = '已連線正式 API：案件建立與狀態均受伺服器流程限制。'; state.classList.add('connected'); message('寄售案件已建立。'); } else { cases.unshift({ caseNumber: 'JC-展示資料', sellerName: input.sellerName, itemCount: input.items.length, status: 'submitted' }); render(); message('展示資料案件已建立。'); } dialog.close(); event.currentTarget.reset(); resetCardItems(); } catch (error) { message(error.message || '案件建立失敗。'); } };
 if (api.enabled) refresh().then(() => { state.textContent = '已連線正式 API：寄售案件依 OIDC 權限讀取。'; state.classList.add('connected'); }).catch(error => { state.textContent = `無法連線正式 API：${error.message}`; state.classList.add('failed'); });
 
-const baseRender = render;
 const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
 render = () => {
-  baseRender();
-  rows.querySelectorAll('tr').forEach((row, index) => {
-    const item = cases[index];
-    if (item?.id) row.querySelector('.case-actions').insertAdjacentHTML('afterbegin', `<button class="ghost" data-detail="${item.id}">明細</button>`);
-  });
+  rows.replaceChildren(...cases.map(item => {
+    const row = document.createElement('tr');
+    const number = document.createElement('td'); const bold = document.createElement('b'); bold.textContent = item.caseNumber; number.append(bold);
+    const seller = document.createElement('td'); seller.textContent = item.sellerName;
+    const count = document.createElement('td'); count.textContent = String(item.itemCount);
+    const status = document.createElement('td'); const badge = document.createElement('span'); badge.className = `status ${item.status === 'listed' ? 'live' : item.status === 'received' ? 'scheduled' : ''}`; badge.textContent = names[item.status] || item.status; status.append(badge);
+    const actions = document.createElement('td'); actions.className = 'case-actions';
+    if (item.id) { const detail = document.createElement('button'); detail.className = 'ghost'; detail.dataset.detail = item.id; detail.textContent = '明細'; actions.append(detail); }
+    for (const action of transitions[item.status] || []) { const button = document.createElement('button'); button.className = 'ghost'; button.dataset.id = item.id || item.caseNumber; button.dataset.next = action.status; button.textContent = action.label; actions.append(button); }
+    if (!actions.children.length) { const unavailable = document.createElement('small'); unavailable.textContent = '無可執行操作'; actions.append(unavailable); }
+    row.append(number, seller, count, status, actions); return row;
+  }));
 };
 const detailDialog = document.createElement('dialog');
 detailDialog.innerHTML = '<form method="dialog"><header><div><p class="eyebrow">CONSIGNMENT DETAIL</p><h2>寄售案件明細</h2></div><button class="close" type="button" aria-label="關閉">×</button></header><div class="history-list"></div><footer><button class="primary dark" type="button">關閉</button></footer></form>';
