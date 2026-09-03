@@ -34,4 +34,28 @@ async function refresh() { cases = await api.listConsignments(); render(); }
 render(); document.querySelector('#open').onclick = () => { form.reset(); resetCardItems(); dialog.showModal(); };
 form.onsubmit = async event => { event.preventDefault(); const values = new FormData(event.currentTarget); const input = { sellerName: values.get('name'), sellerContact: values.get('contact'), items: [...itemList.children].map(item => ({ cardName: item.querySelector('[name="cardName"]').value, cardNumber: item.querySelector('[name="cardNumber"]').value || null, cardCondition: item.querySelector('[name="cardCondition"]').value, suggestedPriceCents: Number(item.querySelector('[name="suggestedPrice"]').value) })) }; try { if (api.enabled) { await api.createConsignment(input); await refresh(); state.textContent = '已連線正式 API：案件建立與狀態均受伺服器流程限制。'; state.classList.add('connected'); message('寄售案件已建立。'); } else { cases.unshift({ caseNumber: 'JC-展示資料', sellerName: input.sellerName, itemCount: input.items.length, status: 'submitted' }); render(); message('展示資料案件已建立。'); } dialog.close(); event.currentTarget.reset(); resetCardItems(); } catch (error) { message(error.message || '案件建立失敗。'); } };
 if (api.enabled) refresh().then(() => { state.textContent = '已連線正式 API：寄售案件依 OIDC 權限讀取。'; state.classList.add('connected'); }).catch(error => { state.textContent = `無法連線正式 API：${error.message}`; state.classList.add('failed'); });
+
+const baseRender = render;
+const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+render = () => {
+  baseRender();
+  rows.querySelectorAll('tr').forEach((row, index) => {
+    const item = cases[index];
+    if (item?.id) row.querySelector('.case-actions').insertAdjacentHTML('afterbegin', `<button class="ghost" data-detail="${item.id}">明細</button>`);
+  });
+};
+const detailDialog = document.createElement('dialog');
+detailDialog.innerHTML = '<form method="dialog"><header><div><p class="eyebrow">CONSIGNMENT DETAIL</p><h2>寄售案件明細</h2></div><button class="close" type="button" aria-label="關閉">×</button></header><div class="history-list"></div><footer><button class="primary dark" type="button">關閉</button></footer></form>';
+document.body.append(detailDialog);
+detailDialog.querySelectorAll('button').forEach(button => button.addEventListener('click', () => detailDialog.close()));
+async function showDetail(id) {
+  try {
+    const detail = await api.consignmentDetail(id);
+    const cards = detail.items.map(item => `<article><b>${esc(item.cardName)}</b><span>${esc(item.cardNumber || '未填卡號')} ・ ${esc(item.cardCondition)}</span><small>建議售價 ${Number(item.suggestedPriceCents).toLocaleString('zh-TW')} 元</small></article>`).join('');
+    detailDialog.querySelector('.history-list').innerHTML = `<article><b>${esc(detail.caseNumber)}</b><span>${esc(names[detail.status] || detail.status)}</span><small>${esc(detail.sellerName)} ・ ${esc(detail.sellerContact)}</small></article>${cards || '<p class="empty-history">此案件沒有卡片明細。</p>'}`;
+    detailDialog.showModal();
+  } catch (error) { message(error.message || '讀取寄售案件明細失敗。'); }
+}
+rows.addEventListener('click', event => { const id = event.target.dataset.detail; if (id) showDetail(id); });
+render();
 rows.addEventListener('click', async event => { const id = event.target.dataset.id; const next = event.target.dataset.next; if (!id || !next) return; try { if (api.enabled) { await api.updateConsignmentStatus(id, next); await refresh(); state.textContent = '已連線正式 API：狀態變更已由伺服器流程驗證。'; state.classList.add('connected'); } else { cases = cases.map(item => (item.id || item.caseNumber) === id ? { ...item, status: next } : item); render(); } message(`案件已更新為「${names[next]}」。`); } catch (error) { message(error.message || '案件狀態更新失敗。'); } });

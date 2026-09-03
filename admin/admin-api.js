@@ -67,6 +67,7 @@
     listOrders: () => request('/api/v1/admin/orders'),
     orderDetail: id => request(`/api/v1/admin/orders/${id}`),
     listConsignments: () => request('/api/v1/admin/consignments'),
+    consignmentDetail: id => request(`/api/v1/admin/consignments/${id}`),
     createConsignment: input => request('/api/v1/admin/consignments', { method: 'POST', body: JSON.stringify(input) }),
     updateConsignmentStatus: (id, status) => request(`/api/v1/admin/consignments/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
     listUsers: () => request('/api/v1/admin/users'),
