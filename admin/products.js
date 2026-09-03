@@ -26,7 +26,8 @@ document.querySelector('[name="price"]').closest('label').insertAdjacentHTML('af
 document.querySelector('#stock-field').insertAdjacentHTML('afterend','<label class="full">商品圖片網址<input name="imageUrl" type="url" inputmode="url" placeholder="https://cdn.example.com/products/item.jpg"></label><div class="product-image-preview"><img alt="商品圖片預覽"><span><b>商品圖片預覽</b>儲存後會顯示於前台商品卡與商品詳情。</span></div>');
 const imageUrlInput = document.querySelector('[name="imageUrl"]');
 const imagePreview = document.querySelector('.product-image-preview');
-function refreshImagePreview() { const url = imageUrlInput.value.trim(); imagePreview.classList.toggle('show', Boolean(url)); if (url) imagePreview.querySelector('img').src = url; else imagePreview.querySelector('img').removeAttribute('src'); }
+function safeImageUrl(value) { try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) ? url.href : null; } catch { return null; } }
+function refreshImagePreview() { const url = imageUrlInput.value.trim(); const imageUrl = url ? safeImageUrl(url) : null; imagePreview.classList.toggle('show', Boolean(imageUrl)); if (imageUrl) imagePreview.querySelector('img').src = imageUrl; else imagePreview.querySelector('img').removeAttribute('src'); }
 imageUrlInput.addEventListener('input', refreshImagePreview);
 function setKindFields(kind) { const preorder = kind === 'preorder'; document.querySelector('#deposit-field').hidden = !preorder; document.querySelector('#release-field').hidden = !preorder; document.querySelector('#stock-field').hidden = preorder; }
 function openNewProduct() { editingProductId = null; document.querySelector('#product-dialog-eyebrow').textContent = 'NEW PRODUCT'; document.querySelector('#product-dialog-title').textContent = '新增商品'; document.querySelector('#product-form').reset(); refreshImagePreview(); setKindFields('preorder'); dialog.showModal(); }
@@ -37,7 +38,9 @@ document.querySelector('#product-form').addEventListener('submit', async event =
   const price = Number(form.get('price'));
   const deposit = Number(form.get('deposit'));
   if (preorder && deposit > price) return message('預購訂金不可高於售價，請確認金額。');
-  const input = { sku: form.get('sku'), name: form.get('name'), kind: form.get('kind'), category: form.get('category'), priceCents: Number(form.get('price')), originalPriceCents: form.get('originalPrice') ? Number(form.get('originalPrice')) : null, depositCents: preorder ? Number(form.get('deposit')) : null, availableStock: preorder ? null : Number(form.get('stock')), releaseDate: preorder ? form.get('releaseDate') : null, imageUrl: form.get('imageUrl') || null, status: form.get('status') };
+  const imageUrl = form.get('imageUrl').trim();
+  if (imageUrl && !safeImageUrl(imageUrl)) return message('商品圖片網址只接受 http 或 https 網址。');
+  const input = { sku: form.get('sku'), name: form.get('name'), kind: form.get('kind'), category: form.get('category'), priceCents: Number(form.get('price')), originalPriceCents: form.get('originalPrice') ? Number(form.get('originalPrice')) : null, depositCents: preorder ? Number(form.get('deposit')) : null, availableStock: preorder ? null : Number(form.get('stock')), releaseDate: preorder ? form.get('releaseDate') : null, imageUrl: imageUrl || null, status: form.get('status') };
   try {
     if (api.enabled) { const result = editingProductId ? await api.updateProduct(editingProductId, input) : await api.createProduct(input); await refresh(); state.textContent = '已連線正式 API：商品資料依 OIDC 權限讀取與寫入。'; state.classList.add('connected'); message(result.pendingChangeId || result.status === 'pending_review' ? '商品價格已送交審核。' : '商品已由正式 API 儲存。'); }
     else { if (editingProductId) products = products.map(p => p.id === editingProductId ? { ...p, ...input } : p); else products.unshift(input); render(); message('展示資料已儲存。'); }
