@@ -1,6 +1,10 @@
 // Set window.JIANGNAN_API_BASE during production deployment. GitHub Pages keeps the placeholder when no API exists.
 const bannerApi = window.JIANGNAN_API_BASE;
 const placements = [{ key: 'home_leaderboard', element: '#home-leaderboard' }, { key: 'product_sidebar', element: '.side-ad' }, { key: 'mobile_banner', element: '#mobile-banner' }];
+function safeUrl(value, allowInternal = false) {
+  if (allowInternal && typeof value === 'string' && /^\/[a-zA-Z0-9/_?=&-]*$/.test(value)) return value;
+  try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) ? url.href : null; } catch { return null; }
+}
 function ensureMobilePlacement() {
   if (document.querySelector('#mobile-banner')) return;
   const stockLayout = document.querySelector('.stock-layout');
@@ -14,12 +18,20 @@ async function loadBanner({ key, element }) {
     if (!response.ok) return;
     const { data } = await response.json();
     const banner = data[0];
-    if (!banner?.imageUrl) return;
+    const imageUrl = safeUrl(banner?.imageUrl);
+    if (!imageUrl) return;
     const target = document.querySelector(element);
     if (!target) return;
-    target.innerHTML = `<a class="managed-banner ${banner.kind}" href="${banner.targetUrl || '#'}" ${banner.targetUrl?.startsWith('http') ? 'rel="noopener sponsored" target="_blank"' : ''}><img src="${banner.imageUrl}" alt="${banner.name}"><span>${banner.kind === 'external' ? '廣告' : '店內活動'}</span></a>`;
+    const targetUrl = safeUrl(banner.targetUrl, true);
+    const link = document.createElement('a');
+    link.className = `managed-banner ${banner.kind === 'external' ? 'external' : 'store'}`;
+    link.href = targetUrl || '#';
+    if (targetUrl?.startsWith('http')) { link.rel = 'noopener sponsored'; link.target = '_blank'; }
+    const image = document.createElement('img'); image.src = imageUrl; image.alt = String(banner.name || 'Banner');
+    const label = document.createElement('span'); label.textContent = banner.kind === 'external' ? '廣告' : '店內活動';
+    link.append(image, label); target.replaceChildren(link);
     recordEvent(banner.id, 'impression');
-    target.querySelector('a').addEventListener('click', () => recordEvent(banner.id, 'click'));
+    link.addEventListener('click', () => recordEvent(banner.id, 'click'));
   } catch { /* Public pages must remain usable when a campaign service is unavailable. */ }
 }
 ensureMobilePlacement();
