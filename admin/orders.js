@@ -4,7 +4,23 @@ const rows = document.querySelector('#rows');
 const state = document.querySelector('[data-connection-state]');
 const money = value => `NT$ ${Number(value).toLocaleString('zh-TW')}`;
 const names = { pending_payment: '待付款', paid: '已付款', cancelled: '已取消', expired: '已逾時', fulfilled: '已履約' };
+const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
 function expiry(value) { return value ? new Date(value).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '未設定'; }
-function render(data) { rows.innerHTML = data.map(order => `<tr><td><b>${order.orderNumber}</b></td><td>${order.customerEmail}</td><td>${order.itemCount}</td><td><b>${money(order.amountDueCents)}</b></td><td>${order.status === 'pending_payment' ? expiry(order.expiresAt) : '-'}</td><td><span class="status ${order.status === 'pending_payment' ? 'review' : order.status === 'paid' ? 'live' : ''}">${names[order.status] || order.status}</span></td></tr>`).join(''); }
+function render(data) { rows.innerHTML = data.map(order => `<tr><td><b>${esc(order.orderNumber)}</b></td><td>${esc(order.customerEmail)}</td><td>${order.itemCount}</td><td><b>${money(order.amountDueCents)}</b></td><td>${order.status === 'pending_payment' ? expiry(order.expiresAt) : '-'}</td><td><span class="status ${order.status === 'pending_payment' ? 'review' : order.status === 'paid' ? 'live' : ''}">${names[order.status] || order.status}</span></td><td>${order.id ? `<button class="ghost" data-detail="${order.id}">明細</button>` : '<small>展示資料</small>'}</td></tr>`).join(''); }
+const header = rows.closest('table').querySelector('thead tr');
+header.insertAdjacentHTML('beforeend', '<th>明細</th>');
+const detailDialog = document.createElement('dialog');
+detailDialog.innerHTML = '<form method="dialog"><header><div><p class="eyebrow">ORDER DETAIL</p><h2>訂單明細</h2></div><button class="close" type="button" aria-label="關閉">×</button></header><div class="history-list"></div><footer><button class="primary dark" type="button">關閉</button></footer></form>';
+document.body.append(detailDialog);
+detailDialog.querySelectorAll('button').forEach(button => button.addEventListener('click', () => detailDialog.close()));
+async function showDetail(id) {
+  try {
+    const order = await api.orderDetail(id);
+    const lines = order.items.map(item => `<article><b>${esc(item.productName)}</b><span>${item.quantity} 件 ・ 每件 ${money(item.duePerUnitCents)}</span><small>${item.reservedStock ? '現貨庫存已保留' : '預購訂金項目'} ・ 商品售價 ${money(item.unitPriceCents)}</small></article>`).join('');
+    detailDialog.querySelector('.history-list').innerHTML = `<article><b>${esc(order.orderNumber)}</b><span>${names[order.status] || order.status} ・ ${money(order.amountDueCents)}</span><small>${esc(order.customerEmail)} ・ 建立於 ${expiry(order.createdAt)}</small></article>${lines || '<p class="empty-history">此訂單沒有品項資料。</p>'}`;
+    detailDialog.showModal();
+  } catch (error) { state.textContent = `讀取訂單明細失敗：${error.message}`; state.classList.add('failed'); }
+}
+rows.addEventListener('click', event => { const id = event.target.dataset.detail; if (id) showDetail(id); });
 render(demoOrders);
 if (api.enabled) api.listOrders().then(data => { render(data); state.textContent = '已連線正式 API：訂單僅供查看，付款結果由金流回呼寫入。'; state.classList.add('connected'); }).catch(error => { state.textContent = `無法連線正式 API：${error.message}`; state.classList.add('failed'); });

@@ -65,6 +65,7 @@
     createContent: input => request('/api/v1/admin/content', { method: 'POST', body: JSON.stringify(input) }),
     updateContent: (id, input) => request(`/api/v1/admin/content/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
     listOrders: () => request('/api/v1/admin/orders'),
+    orderDetail: id => request(`/api/v1/admin/orders/${id}`),
     listConsignments: () => request('/api/v1/admin/consignments'),
     createConsignment: input => request('/api/v1/admin/consignments', { method: 'POST', body: JSON.stringify(input) }),
     updateConsignmentStatus: (id, status) => request(`/api/v1/admin/consignments/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
