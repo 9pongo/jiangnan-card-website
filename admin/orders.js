@@ -17,7 +17,10 @@ function inventoryState(order, item) {
   return '現貨庫存已扣除';
 }
 function render(data) { rows.innerHTML = data.length ? data.map(order => `<tr><td><b>${esc(order.orderNumber)}</b></td><td>${esc(order.customerEmail)}</td><td>${order.itemCount}</td><td><b>${money(order.amountDueCents)}</b></td><td>${order.status === 'pending_payment' ? expiry(order.expiresAt) : '-'}</td><td><span class="status ${order.status === 'pending_payment' ? 'review' : order.status === 'paid' ? 'live' : ''}">${names[order.status] || order.status}</span></td><td>${order.id ? `<button class="ghost" data-detail="${order.id}">明細</button>` : '<small>展示資料</small>'}</td></tr>`).join('') : '<tr><td colspan="7"><small>找不到符合條件的訂單。</small></td></tr>'; }
-function applyFilters() { const term = searchInput.value.trim().toLocaleLowerCase('zh-TW'); const status = statusFilter.value; const filtered = orders.filter(order => (status === 'all' || order.status === status) && (!term || `${order.orderNumber} ${order.customerEmail}`.toLocaleLowerCase('zh-TW').includes(term))); render(filtered); filterSummary.textContent = `顯示 ${filtered.length}／${orders.length} 筆訂單`; }
+function filteredOrders() { const term = searchInput.value.trim().toLocaleLowerCase('zh-TW'); const status = statusFilter.value; return orders.filter(order => (status === 'all' || order.status === status) && (!term || `${order.orderNumber} ${order.customerEmail}`.toLocaleLowerCase('zh-TW').includes(term))); }
+function applyFilters() { const filtered = filteredOrders(); render(filtered); filterSummary.textContent = `顯示 ${filtered.length}／${orders.length} 筆訂單`; }
+function csvCell(value) { return `"${String(value ?? '').replaceAll('"', '""')}"`; }
+function exportOrders() { const records = filteredOrders(); const csvRows = [['訂單編號', '顧客', '商品數', '應付金額', '保留至', '狀態'], ...records.map(order => [order.orderNumber, order.customerEmail, order.itemCount, order.amountDueCents, order.expiresAt || '', names[order.status] || order.status])]; const csv = `\uFEFF${csvRows.map(row => row.map(csvCell).join(',')).join('\r\n')}`; const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); const link = document.createElement('a'); link.href = url; link.download = `jiangnan-orders-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(url); }
 const header = rows.closest('table').querySelector('thead tr');
 header.insertAdjacentHTML('beforeend', '<th>明細</th>');
 const detailDialog = document.createElement('dialog');
@@ -35,5 +38,6 @@ async function showDetail(id) {
 rows.addEventListener('click', event => { const id = event.target.dataset.detail; if (id) showDetail(id); });
 searchInput.addEventListener('input', applyFilters);
 statusFilter.addEventListener('change', applyFilters);
+document.querySelector('#export-orders').addEventListener('click', exportOrders);
 applyFilters();
 if (api.enabled) api.listOrders().then(data => { orders = data; applyFilters(); state.textContent = '已連線正式 API：訂單僅供查看，付款結果由金流回呼寫入。'; state.classList.add('connected'); }).catch(error => { state.textContent = `無法連線正式 API：${error.message}`; state.classList.add('failed'); });
