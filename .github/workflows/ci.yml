@@ -59,6 +59,17 @@ jobs:
             -e DATABASE_URL=postgresql://jiangnan_card:local-development-only@jiangnan-migration-ci-db:5432/jiangnan_card \
             jiangnan-ci-migrate
           test "$(docker exec jiangnan-migration-ci-db psql -U jiangnan_card -d jiangnan_card -Atqc 'SELECT count(*) FROM schema_migrations')" = "$(find server/db/migrations -maxdepth 1 -name '*.sql' | wc -l | tr -d ' ')"
+          docker exec jiangnan-migration-ci-db createdb -U jiangnan_card jiangnan_legacy
+          docker run --rm --network jiangnan-migration-ci --entrypoint /bin/sh \
+            -e DATABASE_URL=postgresql://jiangnan_card:local-development-only@jiangnan-migration-ci-db:5432/jiangnan_legacy \
+            jiangnan-ci-migrate -c 'for migration in /migrations/*.sql; do [ "$(basename "$migration")" = "017_payment_integration_foundation.sql" ] && break; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done'
+          docker run --rm --network jiangnan-migration-ci \
+            -e DATABASE_URL=postgresql://jiangnan_card:local-development-only@jiangnan-migration-ci-db:5432/jiangnan_legacy \
+            -e MIGRATION_BASELINE=016_customer_policy_consent.sql \
+            -e MIGRATION_BASELINE_ACK=existing-schema-verified \
+            jiangnan-ci-migrate
+          test "$(docker exec jiangnan-migration-ci-db psql -U jiangnan_card -d jiangnan_legacy -Atqc 'SELECT count(*) FROM schema_migrations')" = "$(find server/db/migrations -maxdepth 1 -name '*.sql' | wc -l | tr -d ' ')"
+          test "$(docker exec jiangnan-migration-ci-db psql -U jiangnan_card -d jiangnan_legacy -Atqc "SELECT to_regclass('public.payment_attempts') IS NOT NULL")" = "t"
       - name: Remove migration test environment
         if: always()
         run: |
