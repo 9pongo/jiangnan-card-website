@@ -128,3 +128,15 @@ docker run --rm -e DATABASE_URL=<private-postgresql-url> jiangnan-card-migrate:r
 ```
 
 此 runner 會記錄每支 migration 的檔名與 SHA-256；同名檔案內容若遭修改會停止，不會靜默覆寫既有 schema。部署平台必須保證同一時間只執行一個 migration job；完成後再部署 API。
+
+若資料庫是在 migration runner 導入前，已由本專案舊 compose 套用至 `016_customer_policy_consent.sql`，首次改用 runner 時不可直接執行，否則會嘗試重跑既有 DDL。完成備份與 schema 檢查後，僅能使用一次下列明確 baseline；runner 會檢查 `orders`、`customers`、條款同意欄位與 `expired` 訂單狀態存在，然後記錄 `001` 至 `016` 的 checksum 並套用 `017`：
+
+```powershell
+docker run --rm \
+  -e DATABASE_URL=<private-postgresql-url> \
+  -e MIGRATION_BASELINE=016_customer_policy_consent.sql \
+  -e MIGRATION_BASELINE_ACK=existing-schema-verified \
+  jiangnan-card-migrate:release
+```
+
+若 baseline 前已存在 `schema_migrations`、缺少任一 sentinel，或未提供確認字串，runner 會拒絕執行。不得以 baseline 跳過未知資料庫或未知 migration 版本。

@@ -59,7 +59,7 @@ cd server
 npm run verify:production-config
 ```
 
-資料庫 migration 不由 API 啟動時自動執行。部署流程應先建立 `server/Dockerfile.migrate`、以私網 `DATABASE_URL` 執行一次性 job，確認完成後才部署 API。runner 會保存檔名與 SHA-256，並在同名 migration 遭改寫時停止；平台必須限制同時只能有一個 migration job。
+資料庫 migration 不由 API 啟動時自動執行。部署流程應先建立 `server/Dockerfile.migrate`、以私網 `DATABASE_URL` 執行一次性 job，確認完成後才部署 API。runner 會保存檔名與 SHA-256，並在同名 migration 遭改寫時停止；平台必須限制同時只能有一個 migration job。若是 runner 導入前已完成 `016` 的既有資料庫，先完成備份與 schema 檢查，再以 `MIGRATION_BASELINE=016_customer_policy_consent.sql` 與 `MIGRATION_BASELINE_ACK=existing-schema-verified` 執行一次；其他未知版本不得 baseline。
 
 ## SSO 串接契約
 
