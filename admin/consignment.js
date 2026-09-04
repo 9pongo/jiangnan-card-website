@@ -2,6 +2,7 @@ const demoCases = [{ caseNumber: 'JC-20260902-A1B2C3', sellerName: '陳小姐', 
 let cases = demoCases;
 const api = window.JiangnanAdminApi;
 const rows = document.querySelector('#rows'); const dialog = document.querySelector('#dialog'); const toast = document.querySelector('.toast'); const state = document.querySelector('[data-connection-state]');
+const searchInput = document.querySelector('#consignment-search'); const statusFilter = document.querySelector('#consignment-status'); const filterSummary = document.querySelector('#consignment-filter-summary');
 const names = { submitted: '送件', received: '收件', listed: '上架', returned: '退還', cancelled: '取消' };
 const transitions = { submitted: [{ status: 'received', label: '確認收件' }, { status: 'cancelled', label: '取消案件' }], received: [{ status: 'listed', label: '標記上架' }, { status: 'returned', label: '退還寄售人' }], listed: [{ status: 'returned', label: '退還寄售人' }] };
 const form = document.querySelector('#form');
@@ -36,8 +37,11 @@ form.onsubmit = async event => { event.preventDefault(); const values = new Form
 if (api.enabled) refresh().then(() => { state.textContent = '已連線正式 API：寄售案件依 OIDC 權限讀取。'; state.classList.add('connected'); }).catch(error => { state.textContent = `無法連線正式 API：${error.message}`; state.classList.add('failed'); });
 
 const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+function filteredCases() { const term = searchInput.value.trim().toLocaleLowerCase('zh-TW'); const status = statusFilter.value; return cases.filter(item => (status === 'all' || item.status === status) && (!term || `${item.caseNumber} ${item.sellerName}`.toLocaleLowerCase('zh-TW').includes(term))); }
 render = () => {
-  rows.replaceChildren(...cases.map(item => {
+  const filtered = filteredCases();
+  filterSummary.textContent = `顯示 ${filtered.length}／${cases.length} 筆案件`;
+  rows.replaceChildren(...filtered.map(item => {
     const row = document.createElement('tr');
     const number = document.createElement('td'); const bold = document.createElement('b'); bold.textContent = item.caseNumber; number.append(bold);
     const seller = document.createElement('td'); seller.textContent = item.sellerName;
@@ -63,5 +67,7 @@ async function showDetail(id) {
   } catch (error) { message(error.message || '讀取寄售案件明細失敗。'); }
 }
 rows.addEventListener('click', event => { const id = event.target.dataset.detail; if (id) showDetail(id); });
+searchInput.addEventListener('input', render);
+statusFilter.addEventListener('change', render);
 render();
 rows.addEventListener('click', async event => { const id = event.target.dataset.id; const next = event.target.dataset.next; if (!id || !next) return; try { if (api.enabled) { await api.updateConsignmentStatus(id, next); await refresh(); state.textContent = '已連線正式 API：狀態變更已由伺服器流程驗證。'; state.classList.add('connected'); } else { cases = cases.map(item => (item.id || item.caseNumber) === id ? { ...item, status: next } : item); render(); } message(`案件已更新為「${names[next]}」。`); } catch (error) { message(error.message || '案件狀態更新失敗。'); } });
