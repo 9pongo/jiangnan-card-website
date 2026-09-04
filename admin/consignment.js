@@ -67,7 +67,23 @@ async function showDetail(id) {
   } catch (error) { message(error.message || '讀取寄售案件明細失敗。'); }
 }
 rows.addEventListener('click', event => { const id = event.target.dataset.detail; if (id) showDetail(id); });
+const transitionDialog = document.createElement('dialog');
+transitionDialog.innerHTML = '<form method="dialog"><header><div><p class="eyebrow">CASE STATUS</p><h2>確認案件狀態</h2></div><button class="close" type="button" aria-label="關閉">×</button></header><div class="form-grid"><p class="sub full" data-transition-message></p></div><footer><button class="ghost" type="button" data-transition-cancel>取消</button><button class="primary dark" type="submit">確認更新</button></footer></form>';
+document.body.append(transitionDialog);
+let pendingTransition = null;
+transitionDialog.querySelectorAll('[data-transition-cancel], .close').forEach(button => button.addEventListener('click', () => transitionDialog.close()));
+function requestStatusChange(id, next) {
+  const item = cases.find(caseItem => (caseItem.id || caseItem.caseNumber) === id);
+  pendingTransition = { id, next };
+  transitionDialog.querySelector('[data-transition-message]').textContent = `將案件「${item?.caseNumber || id}」更新為「${names[next]}」。確認後會依既有作業流程寫入稽核紀錄。`;
+  transitionDialog.showModal();
+}
+async function updateStatus(id, next) {
+  try { if (api.enabled) { await api.updateConsignmentStatus(id, next); await refresh(); state.textContent = '已連線正式 API：狀態變更已由伺服器流程驗證。'; state.classList.add('connected'); } else { cases = cases.map(item => (item.id || item.caseNumber) === id ? { ...item, status: next } : item); render(); } message(`案件已更新為「${names[next]}」。`); } catch (error) { message(error.message || '案件狀態更新失敗。'); }
+}
+transitionDialog.addEventListener('close', () => { pendingTransition = null; });
+transitionDialog.querySelector('form').addEventListener('submit', async event => { event.preventDefault(); const transition = pendingTransition; if (!transition) return transitionDialog.close(); const submit = event.currentTarget.querySelector('[type="submit"]'); submit.disabled = true; await updateStatus(transition.id, transition.next); submit.disabled = false; transitionDialog.close(); });
 searchInput.addEventListener('input', render);
 statusFilter.addEventListener('change', render);
 render();
-rows.addEventListener('click', async event => { const id = event.target.dataset.id; const next = event.target.dataset.next; if (!id || !next) return; try { if (api.enabled) { await api.updateConsignmentStatus(id, next); await refresh(); state.textContent = '已連線正式 API：狀態變更已由伺服器流程驗證。'; state.classList.add('connected'); } else { cases = cases.map(item => (item.id || item.caseNumber) === id ? { ...item, status: next } : item); render(); } message(`案件已更新為「${names[next]}」。`); } catch (error) { message(error.message || '案件狀態更新失敗。'); } });
+rows.addEventListener('click', event => { const id = event.target.dataset.id; const next = event.target.dataset.next; if (id && next) requestStatusChange(id, next); });
