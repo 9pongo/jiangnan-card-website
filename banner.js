@@ -28,6 +28,18 @@ async function loadBanner({ key, element }) {
       if (!image) return;
       image.src = imageUrl;
       image.alt = String(banner.name || '首頁主視覺 Banner');
+      target.querySelector('.hero-campaign')?.remove();
+      const campaign = document.createElement(targetUrl ? 'a' : 'div');
+      campaign.className = `hero-campaign ${banner.kind === 'external' ? 'external' : 'store'}`;
+      if (targetUrl) {
+        campaign.href = targetUrl;
+        if (targetUrl.startsWith('http')) { campaign.rel = 'noopener sponsored'; campaign.target = '_blank'; }
+        campaign.addEventListener('click', () => recordEvent(banner.id, 'click'));
+      }
+      const label = document.createElement('span'); label.textContent = banner.kind === 'external' ? '第三方廣告' : '店內活動';
+      const name = document.createElement('b'); name.textContent = String(banner.name || '首頁主視覺 Banner');
+      campaign.append(label, name);
+      target.append(campaign);
       if (targetUrl) {
         const link = document.createElement('a');
         link.className = 'hero-banner-link';
