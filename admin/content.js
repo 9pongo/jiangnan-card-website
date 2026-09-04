@@ -15,9 +15,11 @@ const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;
 const date = value => value ? new Date(value).toLocaleDateString('zh-TW').replaceAll('/', '.') : '未排程';
 const inputDateTime = value => value ? new Date(value).toISOString().slice(0, 16) : '';
 const asIso = value => value ? new Date(value).toISOString() : null;
+function visibilityStatus(post) { if (post.status !== 'published') return post.status; const now = Date.now(); if (post.startsAt && new Date(post.startsAt).getTime() > now) return 'scheduled'; if (post.endsAt && new Date(post.endsAt).getTime() <= now) return 'expired'; return 'live'; }
+const visibilityName = { live: '顯示中', scheduled: '已排程', expired: '已過期', draft: '草稿', archived: '已封存' };
 const filters = document.createElement('div');
 filters.className = 'toolbar content-toolbar';
-filters.innerHTML = '<label>搜尋標題或 slug<input id="content-search" type="search" placeholder="例如 october-preorder"></label><label>內容狀態<select id="content-status"><option value="all">全部狀態</option><option value="published">發布中</option><option value="draft">草稿</option><option value="archived">已封存</option></select></label>';
+filters.innerHTML = '<label>搜尋標題或 slug<input id="content-search" type="search" placeholder="例如 october-preorder"></label><label>前台可見狀態<select id="content-status"><option value="all">全部狀態</option><option value="live">顯示中</option><option value="scheduled">已排程</option><option value="expired">已過期</option><option value="draft">草稿</option><option value="archived">已封存</option></select></label>';
 const filterSummary = document.createElement('p');
 filterSummary.className = 'sub content-filter-summary';
 filterSummary.setAttribute('aria-live', 'polite');
@@ -26,9 +28,9 @@ const searchInput = filters.querySelector('#content-search');
 const statusFilter = filters.querySelector('#content-status');
 
 function render(data = posts) {
-  rows.innerHTML = data.length ? data.map(post => `<tr><td><b>${esc(post.title)}</b><small>/${esc(post.slug)}</small></td><td>${names[post.kind] || post.kind}</td><td>${date(post.startsAt)}${post.endsAt ? ` - ${date(post.endsAt)}` : ''}</td><td><span class="status ${post.status === 'published' ? 'live' : ''}">${post.status === 'published' ? '發布中' : post.status === 'archived' ? '已封存' : '草稿'}</span></td><td><button class="ghost" data-edit="${post.id}">編輯</button></td></tr>`).join('') : '<tr><td colspan="5"><small>找不到符合條件的內容。</small></td></tr>';
+  rows.innerHTML = data.length ? data.map(post => { const visible = visibilityStatus(post); return `<tr><td><b>${esc(post.title)}</b><small>/${esc(post.slug)}</small></td><td>${names[post.kind] || post.kind}</td><td>${date(post.startsAt)}${post.endsAt ? ` - ${date(post.endsAt)}` : ''}</td><td><span class="status ${visible === 'live' ? 'live' : visible === 'scheduled' ? 'scheduled' : visible === 'expired' ? 'review' : ''}">${visibilityName[visible]}</span></td><td><button class="ghost" data-edit="${post.id}">編輯</button></td></tr>`; }).join('') : '<tr><td colspan="5"><small>找不到符合條件的內容。</small></td></tr>';
 }
-function applyFilters() { const term = searchInput.value.trim().toLocaleLowerCase('zh-TW'); const status = statusFilter.value; const filtered = posts.filter(post => (status === 'all' || post.status === status) && (!term || `${post.title} ${post.slug} ${post.summary}`.toLocaleLowerCase('zh-TW').includes(term))); render(filtered); filterSummary.textContent = `顯示 ${filtered.length}／${posts.length} 筆內容`; }
+function applyFilters() { const term = searchInput.value.trim().toLocaleLowerCase('zh-TW'); const status = statusFilter.value; const filtered = posts.filter(post => (status === 'all' || visibilityStatus(post) === status) && (!term || `${post.title} ${post.slug} ${post.summary}`.toLocaleLowerCase('zh-TW').includes(term))); render(filtered); filterSummary.textContent = `顯示 ${filtered.length}／${posts.length} 筆內容`; }
 function message(value) { toast.textContent = value; toast.classList.add('show'); clearTimeout(message.timeout); message.timeout = setTimeout(() => toast.classList.remove('show'), 2600); }
 async function refresh() { posts = await api.listContent(); applyFilters(); }
 function openNew() {
