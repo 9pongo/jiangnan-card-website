@@ -19,7 +19,9 @@ function uniqueSku() {
 
 async function createVerifiedCustomer() {
   const email = `member-${crypto.randomUUID()}@example.test`;
-  const registration = await request('/api/v1/customer/register', { method: 'POST', body: { email, password: 'TestPassword123!', fullName: '整合測試會員', postalCode: '114', addressCity: '臺北市', addressDistrict: '內湖區', addressLine: '江南街105號' } });
+  const rejected = await request('/api/v1/customer/register', { method: 'POST', body: { email, password: 'TestPassword123!', fullName: '整合測試會員', postalCode: '114', addressCity: '臺北市', addressDistrict: '內湖區', addressLine: '江南街105號', termsAccepted: false, privacyAccepted: true } });
+  assert.equal(rejected.status, 400);
+  const registration = await request('/api/v1/customer/register', { method: 'POST', body: { email, password: 'TestPassword123!', fullName: '整合測試會員', postalCode: '114', addressCity: '臺北市', addressDistrict: '內湖區', addressLine: '江南街105號', termsAccepted: true, privacyAccepted: true } });
   assert.equal(registration.status, 201);
   const verified = await request('/api/v1/customer/email-verifications', { method: 'POST', body: { email, code: registration.body.data.verificationCode } });
   assert.equal(verified.status, 200);

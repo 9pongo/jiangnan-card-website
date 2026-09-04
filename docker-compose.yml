@@ -24,6 +24,7 @@ services:
       - ./server/db/migrations/013_public_consignment_submission.sql:/docker-entrypoint-initdb.d/013_public_consignment_submission.sql:ro
       - ./server/db/migrations/014_product_categories.sql:/docker-entrypoint-initdb.d/014_product_categories.sql:ro
       - ./server/db/migrations/015_customer_membership.sql:/docker-entrypoint-initdb.d/015_customer_membership.sql:ro
+      - ./server/db/migrations/016_customer_policy_consent.sql:/docker-entrypoint-initdb.d/016_customer_policy_consent.sql:ro
       - ./server/db/seed.sql:/docker-entrypoint-initdb.d/999_seed.sql:ro
   api:
     build: ./server
