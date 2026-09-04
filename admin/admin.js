@@ -18,7 +18,7 @@ function renderPlacementHealth() {
   const now = Date.now();
   const placementList = [['hero', '首頁主視覺'], ['home_leaderboard', '首頁橫幅 970 × 250'], ['product_sidebar', '商品側欄 300 × 600'], ['mobile_banner', '手機橫幅']];
   const rank = banner => [banner.type === 'store' && Number(banner.priority) >= 900 ? 0 : 1, -Number(banner.priority), -new Date(banner.createdAt || 0).getTime()];
-  const compare = (left, right) => { const leftRank = rank(left); const rightRank = rank(right); return leftRank.find((value, index) => value !== rightRank[index]) ?? 0; };
+  const compare = (left, right) => { const leftRank = rank(left); const rightRank = rank(right); for (let index = 0; index < leftRank.length; index += 1) { if (leftRank[index] !== rightRank[index]) return leftRank[index] - rightRank[index]; } return 0; };
   const host = document.querySelector('#placement-health');
   host.replaceChildren(...placementList.map(([key, label]) => {
     const active = banners.filter(banner => banner.rawPlacement === key && ['published', 'scheduled'].includes(banner.rawStatus) && new Date(banner.startsAt).getTime() <= now && new Date(banner.endsAt).getTime() > now).sort(compare)[0];
