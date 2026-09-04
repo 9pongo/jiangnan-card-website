@@ -30,6 +30,16 @@ function updateOverview(products, orders, consignments) {
   document.querySelector('#pending-product-count').textContent = products.filter(product => product.status === 'pending_review' || product.pendingChangeId).length;
   document.querySelector('#pending-order-count').textContent = orders.filter(order => order.status === 'pending_payment').length;
   document.querySelector('#pending-consignment-count').textContent = consignments.filter(item => item.status === 'submitted' || item.status === 'received').length;
+  const tasks = [
+    { count: banners.filter(banner => banner.rawStatus === 'pending_review').length, title: '待審核 Banner', detail: '需由具核准權限的成員處理。', href: '#banners', dot: 'coral', status: '待審核', statusClass: 'review' },
+    { count: products.filter(product => product.status === 'pending_review' || product.pendingChangeId).length, title: '待審核商品變更', detail: '價格與上架變更需第二人核准。', href: 'products.html', dot: 'coral', status: '待審核', statusClass: 'review' },
+    { count: orders.filter(order => order.status === 'pending_payment').length, title: '待付款訂單', detail: '訂單意圖尚未代表付款完成。', href: 'orders.html', dot: 'navy', status: '待付款', statusClass: 'scheduled' },
+    { count: consignments.filter(item => item.status === 'submitted').length, title: '待收件寄售案件', detail: '請確認到店案件並依流程收件。', href: 'consignment.html', dot: 'lime', status: '待處理', statusClass: 'scheduled' }
+  ].filter(task => task.count > 0);
+  const host = document.querySelector('#dashboard-tasks');
+  host.replaceChildren();
+  if (!tasks.length) { const item = document.createElement('li'); item.innerHTML = '<span class="task-dot lime"></span><div><b>目前沒有待處理事項</b><small>所有待辦工作均已處理完成。</small></div>'; host.append(item); return; }
+  tasks.forEach(task => { const item = document.createElement('li'); const dot = document.createElement('span'); dot.className = `task-dot ${task.dot}`; const copy = document.createElement('div'); const title = document.createElement('b'); title.textContent = `${task.count} 項${task.title}`; const detail = document.createElement('small'); detail.textContent = task.detail; copy.append(title, detail); const link = document.createElement('a'); link.className = `status ${task.statusClass}`; link.href = task.href; link.textContent = task.status; item.append(dot, copy, link); host.append(item); });
 }
 render();
 document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => { document.querySelector('[data-filter].selected').classList.remove('selected'); button.classList.add('selected'); render(button.dataset.filter); }));
