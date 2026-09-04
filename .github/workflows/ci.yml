@@ -38,6 +38,8 @@ jobs:
         run: docker compose config --quiet
       - name: Validate API contract
         run: npx --yes @redocly/cli@2.51.1 lint docs/openapi.yaml
+      - name: Build migration runner
+        run: docker build -f server/Dockerfile.migrate -t jiangnan-ci-migrate server
       - name: Start isolated integration environment
         run: API_PORT=3300 DB_PORT=55432 docker compose -p jiangnan-ci up -d --build
       - name: Wait for API health check

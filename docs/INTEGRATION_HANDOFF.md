@@ -59,6 +59,8 @@ cd server
 npm run verify:production-config
 ```
 
+資料庫 migration 不由 API 啟動時自動執行。部署流程應先建立 `server/Dockerfile.migrate`、以私網 `DATABASE_URL` 執行一次性 job，確認完成後才部署 API。runner 會保存檔名與 SHA-256，並在同名 migration 遭改寫時停止；平台必須限制同時只能有一個 migration job。
+
 ## SSO 串接契約
 
 1. 正式後台要以 `window.JIANGNAN_GET_ACCESS_TOKEN` 非同步函式取得短效 access token，參考 `admin/admin-api.js`。函式回傳 token 字串，不可回傳密碼或 client secret。

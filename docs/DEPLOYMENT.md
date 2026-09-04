@@ -118,4 +118,13 @@ npm run verify:production-config
 
 ## 資料庫遷移
 
-新資料庫容器會依序套用 `001_initial.sql` 到 `017_payment_integration_foundation.sql` 與種子資料。正式環境必須由 CI/CD 在部署前以受管的遷移工作執行相同 SQL，並記錄執行版本；不得依賴應用程式啟動時自動變更資料庫結構。
+新資料庫容器會依序套用 `001_initial.sql` 到 `017_payment_integration_foundation.sql` 與種子資料。本機 compose 為展示與驗收用途；正式環境必須由 CI/CD 在部署前以受管的遷移工作執行相同 SQL，並記錄執行版本；不得依賴應用程式啟動時自動變更資料庫結構。
+
+正式 migration image 已提供於 `server/Dockerfile.migrate`。CI/CD 應建立此 image，並以私網 `DATABASE_URL` 執行一次性的 job：
+
+```powershell
+docker build -f server/Dockerfile.migrate -t jiangnan-card-migrate:release server
+docker run --rm -e DATABASE_URL=<private-postgresql-url> jiangnan-card-migrate:release
+```
+
+此 runner 會記錄每支 migration 的檔名與 SHA-256；同名檔案內容若遭修改會停止，不會靜默覆寫既有 schema。部署平台必須保證同一時間只執行一個 migration job；完成後再部署 API。
