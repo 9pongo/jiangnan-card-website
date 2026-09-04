@@ -14,7 +14,10 @@ SQL
 find /migrations -maxdepth 1 -type f -name '*.sql' | sort | while IFS= read -r migration; do
   filename=$(basename "$migration")
   checksum=$(sha256sum "$migration" | awk '{print $1}')
-  applied=$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v filename="$filename" -Atqc "SELECT checksum_sha256 FROM schema_migrations WHERE filename = :'filename'")
+  case "$filename" in
+    *[!0-9A-Za-z_.-]*) echo "Unexpected migration filename: $filename" >&2; exit 1 ;;
+  esac
+  applied=$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -Atqc "SELECT checksum_sha256 FROM schema_migrations WHERE filename = '$filename'")
 
   if [ -n "$applied" ]; then
     if [ "$applied" != "$checksum" ]; then
@@ -26,6 +29,10 @@ find /migrations -maxdepth 1 -type f -name '*.sql' | sort | while IFS= read -r m
   fi
 
   echo "Applying: $filename"
-  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
-  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v filename="$filename" -v checksum="$checksum" -c "INSERT INTO schema_migrations(filename, checksum_sha256) VALUES (:'filename', :'checksum')"
+  runfile=$(mktemp)
+  trap 'rm -f "$runfile"' EXIT HUP INT TERM
+  printf '\\i %s\nINSERT INTO schema_migrations(filename, checksum_sha256) VALUES (\047%s\047, \047%s\047);\n' "$migration" "$filename" "$checksum" > "$runfile"
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f "$runfile"
+  rm -f "$runfile"
+  trap - EXIT HUP INT TERM
 done

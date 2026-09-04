@@ -40,6 +40,30 @@ jobs:
         run: npx --yes @redocly/cli@2.51.1 lint docs/openapi.yaml
       - name: Build migration runner
         run: docker build -f server/Dockerfile.migrate -t jiangnan-ci-migrate server
+      - name: Verify migration runner is retry-safe
+        run: |
+          docker network create jiangnan-migration-ci
+          docker run -d --name jiangnan-migration-ci-db --network jiangnan-migration-ci \
+            -e POSTGRES_DB=jiangnan_card \
+            -e POSTGRES_USER=jiangnan_card \
+            -e POSTGRES_PASSWORD=local-development-only \
+            postgres:16-alpine
+          for attempt in {1..30}; do
+            docker exec jiangnan-migration-ci-db pg_isready -U jiangnan_card -d jiangnan_card && break
+            sleep 1
+          done
+          docker run --rm --network jiangnan-migration-ci \
+            -e DATABASE_URL=postgresql://jiangnan_card:local-development-only@jiangnan-migration-ci-db:5432/jiangnan_card \
+            jiangnan-ci-migrate
+          docker run --rm --network jiangnan-migration-ci \
+            -e DATABASE_URL=postgresql://jiangnan_card:local-development-only@jiangnan-migration-ci-db:5432/jiangnan_card \
+            jiangnan-ci-migrate
+          test "$(docker exec jiangnan-migration-ci-db psql -U jiangnan_card -d jiangnan_card -Atqc 'SELECT count(*) FROM schema_migrations')" = "$(find server/db/migrations -maxdepth 1 -name '*.sql' | wc -l | tr -d ' ')"
+      - name: Remove migration test environment
+        if: always()
+        run: |
+          docker rm -f jiangnan-migration-ci-db || true
+          docker network rm jiangnan-migration-ci || true
       - name: Start isolated integration environment
         run: API_PORT=3300 DB_PORT=55432 docker compose -p jiangnan-ci up -d --build
       - name: Wait for API health check
