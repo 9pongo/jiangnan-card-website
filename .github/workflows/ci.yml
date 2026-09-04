@@ -34,6 +34,10 @@ jobs:
           node --check banner.js
           node --check script.js
           node --check server/scripts/verify-production-config.js
+      - name: Validate Docker Compose configuration
+        run: docker compose config --quiet
+      - name: Validate API contract
+        run: npx --yes @redocly/cli@2.51.1 lint docs/openapi.yaml
       - name: Start isolated integration environment
         run: API_PORT=3300 DB_PORT=55432 docker compose -p jiangnan-ci up -d --build
       - name: Wait for API health check
