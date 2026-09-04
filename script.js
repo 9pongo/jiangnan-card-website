@@ -6,6 +6,9 @@ const items = document.querySelector('.cart-items');
 const count = document.querySelector('.cart-count');
 const total = document.querySelector('.cart-total');
 const checkout = document.querySelector('.checkout');
+const cartBreakdown = document.querySelector('.cart-breakdown');
+const preorderBreakdown = document.querySelector('[data-cart-preorder]');
+const stockBreakdown = document.querySelector('[data-cart-stock]');
 const formatter = new Intl.NumberFormat('zh-TW');
 const dateFormatter = new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric' });
 const toast = document.querySelector('.toast');
@@ -50,7 +53,14 @@ function renderSearchResults(query = '') {
 function renderCart() {
   items.innerHTML = cart.length ? cart.map((item, index) => `<article class="cart-item"><div><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.type)}${item.maxQuantity < 10 ? ` ・ 最多 ${item.maxQuantity} 件` : ''}</small></div><div class="cart-line-price"><b>${money(item.price * item.quantity)}</b><div class="cart-quantity" aria-label="${escapeHtml(item.name)} 數量"><button data-quantity="${index}" data-change="-1" aria-label="減少數量" ${item.quantity <= 1 ? 'disabled' : ''}>−</button><span>${item.quantity}</span><button data-quantity="${index}" data-change="1" aria-label="增加數量" ${item.quantity >= item.maxQuantity ? 'disabled' : ''}>+</button></div><button class="cart-remove" data-remove="${index}">移除</button></div></article>`).join('') : '<p class="empty">尚未加入商品</p>';
   const amount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const preorderAmount = cart.filter(item => item.type.startsWith('預購訂金')).reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const stockAmount = amount - preorderAmount;
   total.textContent = money(amount);
+  cartBreakdown.hidden = amount === 0;
+  preorderBreakdown.hidden = preorderAmount === 0;
+  stockBreakdown.hidden = stockAmount === 0;
+  preorderBreakdown.querySelector('b').textContent = money(preorderAmount);
+  stockBreakdown.querySelector('b').textContent = money(stockAmount);
   const quantity = cart.reduce((sum, item) => sum + item.quantity, 0);
   count.textContent = quantity;
   count.classList.toggle('has-items', quantity > 0);
