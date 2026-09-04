@@ -23,6 +23,11 @@ function apiBanner(item) {
   return { id: item.id, rawStatus: item.status, name: item.name, owner: item.createdBy || '系統使用者', type: item.kind, placement: placementNames[item.placement] || item.placement, period: `${format(item.startsAt)} - ${format(item.endsAt)}`, impressions: Number(item.impressions).toLocaleString('zh-TW'), clicks: Number(item.clicks).toLocaleString('zh-TW'), status: statusNames[item.status] || item.status, image: item.imageUrl };
 }
 function actionButton(banner) { if (!api.enabled || !banner.rawStatus) return '<button class="actions" aria-label="展示模式">⋮</button>'; if (banner.rawStatus === 'pending_review') return `<button class="ghost" data-approve="${banner.id}">核准</button>`; if (banner.rawStatus === 'draft') return `<button class="ghost" data-submit="${banner.id}">送審</button>`; if (banner.rawStatus === 'published' || banner.rawStatus === 'scheduled') return `<button class="ghost" data-disable="${banner.id}">停用</button>`; return ''; }
+function updateOverview(products, orders, consignments) {
+  document.querySelector('#pending-product-count').textContent = products.filter(product => product.status === 'pending_review' || product.pendingChangeId).length;
+  document.querySelector('#pending-order-count').textContent = orders.filter(order => order.status === 'pending_payment').length;
+  document.querySelector('#pending-consignment-count').textContent = consignments.filter(item => item.status === 'submitted' || item.status === 'received').length;
+}
 render();
 document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => { document.querySelector('[data-filter].selected').classList.remove('selected'); button.classList.add('selected'); render(button.dataset.filter); }));
 document.querySelectorAll('#open-banner, #open-banner-2').forEach(button => button.addEventListener('click', () => dialog.showModal()));
@@ -43,5 +48,5 @@ async function saveBanner(event) {
 }
 table.addEventListener('click', async event => { const id = event.target.dataset.approve || event.target.dataset.submit || event.target.dataset.disable; if (!id) return; try { if (event.target.dataset.approve) await api.approveBanner(id); if (event.target.dataset.submit) await api.submitBanner(id); if (event.target.dataset.disable) await api.disableBanner(id); banners = (await api.listBanners()).map(apiBanner); render(document.querySelector('[data-filter].selected').dataset.filter); showToast('Banner 狀態已更新。'); } catch (error) { showToast(error.message || '狀態更新失敗。'); } });
 if (api.enabled) {
-  api.listBanners().then(data => { banners = data.map(apiBanner); render(document.querySelector('[data-filter].selected').dataset.filter); state.textContent = '已連線正式 API：Banner 資料依 OIDC 權限讀取。'; state.classList.add('connected'); }).catch(error => { state.textContent = `無法連線正式 API：${error.message}`; state.classList.add('failed'); });
+  Promise.all([api.listBanners(), api.listProducts(), api.listOrders(), api.listConsignments()]).then(([bannerData, products, orders, consignments]) => { banners = bannerData.map(apiBanner); render(document.querySelector('[data-filter].selected').dataset.filter); updateOverview(products, orders, consignments); state.textContent = '已連線正式 API：總覽數字依目前後台資料計算。'; state.classList.add('connected'); }).catch(error => { state.textContent = `無法連線正式 API：${error.message}`; state.classList.add('failed'); });
 }
