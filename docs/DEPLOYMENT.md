@@ -100,6 +100,21 @@ docker compose up -d --build api
 2. 後台 API 用戶端僅以 `Authorization: Bearer` 傳送該 token。API 會以 `external_subject` 對應資料庫角色並拒絕未知帳號；不能使用前端傳來的角色名稱授權。
 3. 若以上兩項任一未設定，後台會保持展示模式。GitHub Pages 的 `/admin/` 不是正式管理後台，不能填入正式 API 網址或存取權杖。
 
+### OIDC 上線前檢核
+
+1. 複製專案根目錄的 `.env.production.example` 到部署平台的秘密管理服務或環境變數設定；範本只說明欄位，不得填入或提交真實密碼、Token、OIDC client secret 或雲端金鑰。
+2. 將 `AUTH_MODE=oidc`、`OIDC_ISSUER` 與 `OIDC_AUDIENCE` 設為公司核發 access token 的實際值。production 模式若不是 `oidc`，API 會拒絕啟動；`x-demo-role` 只可用在本機 demo 模式。
+3. 由管理員先建立可登入人員的 `users.external_subject` 對應與角色。未知 subject 必須回 403，不得因登入而自動建立帳號；離職或調職時先停用 IdP 存取，再調整應用程式角色。
+4. 在部署工作負載注入設定後、切換流量前執行：
+
+```powershell
+cd server
+npm run verify:production-config
+```
+
+此檢查會拒絕 demo 授權模式、缺少 OIDC／資料庫／素材／排程設定、非 HTTPS 公開來源、本機素材 provider 與展示用的到期訂單 token。它只驗證設定完整性，不能取代公司 IdP 的實際登入驗收。
+5. 使用一個已授權帳號與一個未授權帳號進行 staging 驗收：已授權帳號應只得到資料庫角色授予的功能；未知帳號應回 403；缺少或無效 access token 應回 401；正式 API 不得接受 `x-demo-role`。
+
 ## 資料庫遷移
 
 新資料庫容器會依序套用 `001_initial.sql` 到 `013_public_consignment_submission.sql` 與種子資料。正式環境必須由 CI/CD 在部署前以受管的遷移工作執行相同 SQL，並記錄執行版本；不得依賴應用程式啟動時自動變更資料庫結構。

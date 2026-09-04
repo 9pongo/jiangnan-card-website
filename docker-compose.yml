@@ -27,6 +27,7 @@ services:
   api:
     build: ./server
     environment:
+      AUTH_MODE: demo
       PORT: 3000
       DATABASE_URL: postgresql://jiangnan_card:local-development-only@db:5432/jiangnan_card
       PUBLIC_ORIGIN: http://localhost:4173,http://127.0.0.1:4173

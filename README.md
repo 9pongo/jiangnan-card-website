@@ -10,6 +10,8 @@
 
 `product.html?id=...` 與 `post.html?slug=...` 是商品、公告與活動的公開詳細頁，皆只會顯示目前已發布且在有效期間內的資料。訂單意向會由伺服器重新計算應付訂金／金額並交易式扣減現貨庫存；這不等同付款完成。公開寄售預約會建立待收件案件，正式上線前仍須完成金流回呼驗證、會員身分、寄售表單人機驗證與完整個資告知。`/admin/` 在 localhost 使用 demo 角色驗收；GitHub Pages 的 `/admin/` 只作展示，不可接到正式 API。
 
+正式部署前請用 `.env.production.example` 建立部署平台設定，並在工作負載環境中執行 `cd server; npm run verify:production-config`。此步驟會拒絕 demo 授權、缺少 OIDC／物件儲存／排程設定或非 HTTPS 公開來源；實際 OIDC 登入與公司帳號授權仍需在 staging 驗收。
+
 ## 發布至 GitHub Pages
 
 此倉庫設定為從 `main` 分支的 `/` 根目錄部署 GitHub Pages。部署完成後，可將 Pages 網址提供給店主檢視與提出修改意見。
