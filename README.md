@@ -2,7 +2,7 @@
 
 這是江南寶卡的公開網站前端與後端基礎，包含卡牌新品、預購訂金購物車、現貨商品、二手卡牌寄售流程規劃、店內活動公告與廣告版位。
 
-`/admin/` 提供店長可檢視的後台展示，具備店內活動／第三方廣告的 Banner 分流、版位、排程、優先權與送審操作。正式版 API、PostgreSQL 和容器設定位於 `server/`；部署與安全要求見 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。從展示版補齊至正式營運的完整範圍、外部輸入與驗收關卡，見 [docs/PRODUCTION_ENGINEERING_PACKAGE.md](docs/PRODUCTION_ENGINEERING_PACKAGE.md)。
+`/admin/` 提供店長可檢視的後台展示，具備店內活動／第三方廣告的 Banner 分流、版位、排程、優先權與送審操作。正式版 API、PostgreSQL 和容器設定位於 `server/`；部署與安全要求見 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。從展示版補齊至正式營運的完整範圍、外部輸入與驗收關卡，見 [docs/PRODUCTION_ENGINEERING_PACKAGE.md](docs/PRODUCTION_ENGINEERING_PACKAGE.md)。供雲端／SSO／金流團隊使用的交接契約與 API 規格見 [docs/INTEGRATION_HANDOFF.md](docs/INTEGRATION_HANDOFF.md) 與 [docs/openapi.yaml](docs/openapi.yaml)。
 
 ## 本機預覽
 

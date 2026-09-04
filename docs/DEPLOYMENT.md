@@ -118,4 +118,4 @@ npm run verify:production-config
 
 ## 資料庫遷移
 
-新資料庫容器會依序套用 `001_initial.sql` 到 `013_public_consignment_submission.sql` 與種子資料。正式環境必須由 CI/CD 在部署前以受管的遷移工作執行相同 SQL，並記錄執行版本；不得依賴應用程式啟動時自動變更資料庫結構。
+新資料庫容器會依序套用 `001_initial.sql` 到 `017_payment_integration_foundation.sql` 與種子資料。正式環境必須由 CI/CD 在部署前以受管的遷移工作執行相同 SQL，並記錄執行版本；不得依賴應用程式啟動時自動變更資料庫結構。

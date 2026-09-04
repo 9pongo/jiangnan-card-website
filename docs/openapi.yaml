@@ -1,0 +1,266 @@
+openapi: 3.1.0
+info:
+  title: 江南寶卡 API
+  version: 0.1.0-handoff
+  license:
+    name: Proprietary
+  description: |
+    可部署 API 的核心契約。GitHub Pages 只供展示，不能作為正式 API origin。
+    付款 provider webhook 與通知 provider adapter 尚待供應商規格確認；其資料庫基線與交接規則見 INTEGRATION_HANDOFF.md。
+servers:
+  - url: https://{apiHost}
+    description: 正式環境範例；實際網域由雲端團隊設定。
+    variables:
+      apiHost:
+        default: api.invalid
+security: []
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: API 與資料庫健康檢查
+      responses:
+        '200':
+          description: 健康
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, const: ok }
+        '500': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/v1/public/products:
+    get:
+      operationId: listPublicProducts
+      summary: 讀取已上架商品
+      responses:
+        '200':
+          description: 商品清單
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductListResponse' }
+        '500': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/v1/customer/register:
+    post:
+      operationId: registerCustomer
+      summary: 註冊顧客會員並發起 Email 驗證
+      description: 正式環境不得在回應內回傳驗證碼。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegistrationRequest' }
+      responses:
+        '201':
+          description: 已建立待驗證會員
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerRegistrationResponse' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/v1/customer/login:
+    post:
+      operationId: loginCustomer
+      summary: 以 Email 與密碼登入
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password, minLength: 10 }
+      responses:
+        '200':
+          description: 已登入
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerSessionResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Email 尚未完成驗證 }
+  /api/v1/checkout/intents:
+    post:
+      operationId: createCheckoutIntent
+      summary: 建立付款意向與現貨庫存保留
+      description: 此端點不是付款成功。需有顧客 session、已驗證 Email 與手機。
+      security: [{ customerSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CheckoutIntentRequest' }
+      responses:
+        '201':
+          description: 已建立付款意向
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderIntentResponse' }
+        '200':
+          description: 相同冪等鍵已建立過付款意向
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderIntentResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: 尚未完成 Email 或手機驗證 }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/internal/orders/release-expired:
+    post:
+      operationId: releaseExpiredOrders
+      summary: 釋放逾時付款意向的現貨保留
+      description: 僅允許受管排程器於私有網路以 x-order-expiry-token 呼叫。
+      security: [{ orderExpiryToken: [] }]
+      responses:
+        '200': { description: 已完成本輪釋放 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/admin/session:
+    get:
+      operationId: getAdminSession
+      summary: 取得已登入後台人員角色與權限
+      security: [{ adminOidc: [] }]
+      responses:
+        '200': { description: 已授權的後台 session }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: SSO 帳號尚未被授權 }
+components:
+  securitySchemes:
+    customerSession:
+      type: http
+      scheme: bearer
+      description: 顧客登入後取得的 opaque session token。
+    adminOidc:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 公司 IdP 簽發的 OIDC access token。
+    orderExpiryToken:
+      type: apiKey
+      in: header
+      name: x-order-expiry-token
+      description: 僅由私有受管排程器持有的短期輪替祕密。
+  schemas:
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+    Product:
+      type: object
+      required: [id, sku, name, kind, category, priceCents]
+      properties:
+        id: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+        kind: { type: string, enum: [preorder, in_stock] }
+        category: { type: string, enum: [booster, single_card, accessories, toy_model] }
+        priceCents: { type: integer, minimum: 0 }
+        originalPriceCents: { type: [integer, 'null'], minimum: 0 }
+        depositCents: { type: [integer, 'null'], minimum: 0 }
+        availableStock: { type: [integer, 'null'], minimum: 0 }
+        releaseDate: { type: [string, 'null'], format: date }
+        imageUrl: { type: [string, 'null'], format: uri }
+    ProductListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Product' }
+    RegistrationRequest:
+      type: object
+      required: [email, password, fullName, postalCode, addressCity, addressDistrict, addressLine, termsAccepted, privacyAccepted]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password, minLength: 10, maxLength: 128 }
+        fullName: { type: string, maxLength: 80 }
+        postalCode: { type: string, pattern: '^\\d{3,6}$' }
+        addressCity: { type: string, maxLength: 40 }
+        addressDistrict: { type: string, maxLength: 40 }
+        addressLine: { type: string, maxLength: 160 }
+        termsAccepted: { type: boolean, const: true }
+        privacyAccepted: { type: boolean, const: true }
+    Customer:
+      type: object
+      required: [id, email, fullName]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        fullName: { type: string }
+        postalCode: { type: string }
+        addressCity: { type: string }
+        addressDistrict: { type: string }
+        addressLine: { type: string }
+        phone: { type: [string, 'null'] }
+        emailVerifiedAt: { type: [string, 'null'], format: date-time }
+        phoneVerifiedAt: { type: [string, 'null'], format: date-time }
+    CustomerRegistrationResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [customer, delivery]
+          properties:
+            customer: { $ref: '#/components/schemas/Customer' }
+            delivery: { type: string, example: email }
+    CustomerSessionResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [customer, token]
+          properties:
+            customer: { $ref: '#/components/schemas/Customer' }
+            token: { type: string }
+    CheckoutIntentRequest:
+      type: object
+      required: [idempotencyKey, items]
+      properties:
+        idempotencyKey: { type: string, format: uuid }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            type: object
+            required: [productId, quantity]
+            properties:
+              productId: { type: string, format: uuid }
+              quantity: { type: integer, minimum: 1, maximum: 10 }
+    OrderIntentResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [id, orderNumber, status, amountDueCents, expiresAt]
+          properties:
+            id: { type: string, format: uuid }
+            orderNumber: { type: string }
+            status: { type: string, const: pending_payment }
+            amountDueCents: { type: integer, minimum: 0 }
+            expiresAt: { type: string, format: date-time }
+  responses:
+    Unauthorized:
+      description: 未登入、session 無效或 token 無效
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    Conflict:
+      description: 資源、庫存或冪等狀態衝突
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    ValidationError:
+      description: 請求欄位不符合驗證規則
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    ServiceUnavailable:
+      description: 服務或其依賴暫時不可用
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }

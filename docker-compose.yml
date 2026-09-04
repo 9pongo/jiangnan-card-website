@@ -25,7 +25,14 @@ services:
       - ./server/db/migrations/014_product_categories.sql:/docker-entrypoint-initdb.d/014_product_categories.sql:ro
       - ./server/db/migrations/015_customer_membership.sql:/docker-entrypoint-initdb.d/015_customer_membership.sql:ro
       - ./server/db/migrations/016_customer_policy_consent.sql:/docker-entrypoint-initdb.d/016_customer_policy_consent.sql:ro
+      - ./server/db/migrations/017_payment_integration_foundation.sql:/docker-entrypoint-initdb.d/017_payment_integration_foundation.sql:ro
       - ./server/db/seed.sql:/docker-entrypoint-initdb.d/999_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jiangnan_card -d jiangnan_card && psql -U jiangnan_card -d jiangnan_card -tAc 'SELECT 1 FROM payment_webhook_inbox LIMIT 1' >/dev/null"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
   api:
     build: ./server
     environment:
@@ -43,7 +50,14 @@ services:
     volumes:
       - banner_assets_data:/app/local-banner-assets
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/health').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 volumes:
   postgres_data:
   banner_assets_data:
