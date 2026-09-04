@@ -1,6 +1,6 @@
 const demoBanners = [
-  { id: 'bnr-001', name: '九月會員日：卡牌周邊 9 折', owner: '江南寶卡', type: 'store', placement: '首頁主視覺', period: '09/01 - 09/30', impressions: '12,840', clicks: '622', status: '發布中', image: 'https://images.unsplash.com/photo-1703023689733-6a4281149189?auto=format&fit=crop&w=180&q=70' },
-  { id: 'bnr-002', name: '星潮玩具新品活動', owner: '星潮玩具', type: 'external', placement: '首頁橫幅 970 × 250', period: '09/02 - 09/16', impressions: '8,120', clicks: '188', status: '待審核', image: 'https://images.unsplash.com/photo-1575767931088-5cb5e584d6bc?auto=format&fit=crop&w=180&q=70' }
+  { id: 'bnr-001', rawStatus: 'published', rawPlacement: 'hero', priority: 900, startsAt: '2026-09-01T00:00:00+08:00', endsAt: '2026-09-30T23:59:00+08:00', createdAt: '2026-09-01T00:00:00+08:00', name: '九月會員日：卡牌周邊 9 折', owner: '江南寶卡', type: 'store', placement: '首頁主視覺', period: '09/01 - 09/30', impressions: '12,840', clicks: '622', status: '發布中', image: 'https://images.unsplash.com/photo-1703023689733-6a4281149189?auto=format&fit=crop&w=180&q=70' },
+  { id: 'bnr-002', rawStatus: 'pending_review', rawPlacement: 'home_leaderboard', priority: 100, startsAt: '2026-09-02T00:00:00+08:00', endsAt: '2026-09-16T23:59:00+08:00', createdAt: '2026-09-02T00:00:00+08:00', name: '星潮玩具新品活動', owner: '星潮玩具', type: 'external', placement: '首頁橫幅 970 × 250', period: '09/02 - 09/16', impressions: '8,120', clicks: '188', status: '待審核', image: 'https://images.unsplash.com/photo-1575767931088-5cb5e584d6bc?auto=format&fit=crop&w=180&q=70' }
 ];
 let banners = demoBanners;
 const table = document.querySelector('#banner-table');
@@ -14,16 +14,34 @@ const statusNames = { draft: '草稿', pending_review: '待審核', scheduled: '
 const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
 function showToast(message) { toast.textContent = message; toast.classList.add('show'); clearTimeout(showToast.timeout); showToast.timeout = setTimeout(() => toast.classList.remove('show'), 2800); }
 function statusClass(status) { return status === '發布中' ? 'live' : status === '待審核' ? 'review' : status === '排程中' ? 'scheduled' : ''; }
+function renderPlacementHealth() {
+  const now = Date.now();
+  const placementList = [['hero', '首頁主視覺'], ['home_leaderboard', '首頁橫幅 970 × 250'], ['product_sidebar', '商品側欄 300 × 600'], ['mobile_banner', '手機橫幅']];
+  const rank = banner => [banner.type === 'store' && Number(banner.priority) >= 900 ? 0 : 1, -Number(banner.priority), -new Date(banner.createdAt || 0).getTime()];
+  const compare = (left, right) => { const leftRank = rank(left); const rightRank = rank(right); return leftRank.find((value, index) => value !== rightRank[index]) ?? 0; };
+  const host = document.querySelector('#placement-health');
+  host.replaceChildren(...placementList.map(([key, label]) => {
+    const active = banners.filter(banner => banner.rawPlacement === key && ['published', 'scheduled'].includes(banner.rawStatus) && new Date(banner.startsAt).getTime() <= now && new Date(banner.endsAt).getTime() > now).sort(compare)[0];
+    const scheduled = banners.filter(banner => banner.rawPlacement === key && banner.rawStatus === 'scheduled' && new Date(banner.startsAt).getTime() > now).sort((left, right) => new Date(left.startsAt) - new Date(right.startsAt))[0];
+    const row = document.createElement('div'); row.className = 'placement-row';
+    const name = document.createElement('span'); name.textContent = label;
+    const detail = document.createElement('b'); detail.textContent = active ? `${active.type === 'store' ? '店內活動' : '第三方廣告'} ・ ${active.name}` : scheduled ? `${scheduled.type === 'store' ? '店內活動' : '第三方廣告'} ・ ${scheduled.name}` : '暫無有效 Banner';
+    const state = document.createElement('small'); state.className = active ? 'live-dot' : scheduled ? 'scheduled-dot' : '';
+    state.textContent = active ? '顯示中' : scheduled ? `排程 ${new Date(scheduled.startsAt).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })}` : '未排程';
+    row.append(name, detail, state); return row;
+  }));
+}
 function render(filter = document.querySelector('[data-filter].selected').dataset.filter) {
   const typeSelected = filter === 'all' ? banners : banners.filter(b => b.type === filter);
   const selected = bannerStatusFilter.value === 'all' ? typeSelected : typeSelected.filter(b => b.status === bannerStatusFilter.value);
   table.innerHTML = selected.length ? selected.map(b => `<tr><td><div class="campaign">${b.image ? `<img class="campaign-image" src="${esc(b.image)}" alt="">` : '<span class="campaign-image"></span>'}<div><b>${esc(b.name)}</b><small>${esc(b.owner)} ・ ${esc(b.id)}</small></div></div></td><td><span class="kind ${b.type}">${b.type === 'store' ? '店內活動' : '第三方廣告'}</span></td><td>${esc(b.placement)}</td><td>${esc(b.period)}</td><td>${esc(b.impressions)}<small> 曝光 / ${esc(b.clicks)} 點擊</small></td><td><span class="status ${statusClass(b.status)}">${esc(b.status)}</span></td><td>${actionButton(b)}</td></tr>`).join('') : '<tr><td colspan="7"><small>找不到符合條件的 Banner。</small></td></tr>';
   document.querySelectorAll('[data-filter]').forEach(button => { button.querySelector('span').textContent = button.dataset.filter === 'all' ? banners.length : banners.filter(b => b.type === button.dataset.filter).length; });
   document.querySelector('#active-count').textContent = banners.filter(b => b.status === '發布中').length;
+  renderPlacementHealth();
 }
 function apiBanner(item) {
   const format = value => value ? new Date(value).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '-';
-  return { id: item.id, rawStatus: item.status, name: item.name, owner: item.createdBy || '系統使用者', type: item.kind, placement: placementNames[item.placement] || item.placement, period: `${format(item.startsAt)} - ${format(item.endsAt)}`, impressions: Number(item.impressions).toLocaleString('zh-TW'), clicks: Number(item.clicks).toLocaleString('zh-TW'), status: statusNames[item.status] || item.status, image: item.imageUrl };
+  return { id: item.id, rawStatus: item.status, name: item.name, owner: item.createdBy || '系統使用者', type: item.kind, placement: placementNames[item.placement] || item.placement, rawPlacement: item.placement, priority: item.priority, startsAt: item.startsAt, endsAt: item.endsAt, createdAt: item.createdAt, period: `${format(item.startsAt)} - ${format(item.endsAt)}`, impressions: Number(item.impressions).toLocaleString('zh-TW'), clicks: Number(item.clicks).toLocaleString('zh-TW'), status: statusNames[item.status] || item.status, image: item.imageUrl };
 }
 function actionButton(banner) { if (!api.enabled || !banner.rawStatus) return '<button class="actions" aria-label="展示模式">⋮</button>'; if (banner.rawStatus === 'pending_review') return `<button class="ghost" data-approve="${banner.id}">核准</button>`; if (banner.rawStatus === 'draft') return `<button class="ghost" data-submit="${banner.id}">送審</button>`; if (banner.rawStatus === 'published' || banner.rawStatus === 'scheduled') return `<button class="ghost" data-disable="${banner.id}">停用</button>`; return ''; }
 function updateOverview(products, orders, consignments) {
@@ -42,6 +60,7 @@ function updateOverview(products, orders, consignments) {
   tasks.forEach(task => { const item = document.createElement('li'); const dot = document.createElement('span'); dot.className = `task-dot ${task.dot}`; const copy = document.createElement('div'); const title = document.createElement('b'); title.textContent = `${task.count} 項${task.title}`; const detail = document.createElement('small'); detail.textContent = task.detail; copy.append(title, detail); const link = document.createElement('a'); link.className = `status ${task.statusClass}`; link.href = task.href; link.textContent = task.status; item.append(dot, copy, link); host.append(item); });
 }
 render();
+if (!api.enabled) updateOverview([], [], []);
 document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => { document.querySelector('[data-filter].selected').classList.remove('selected'); button.classList.add('selected'); render(button.dataset.filter); }));
 bannerStatusFilter.addEventListener('change', () => render());
 document.querySelectorAll('#open-banner, #open-banner-2').forEach(button => button.addEventListener('click', () => dialog.showModal()));
