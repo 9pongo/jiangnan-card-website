@@ -23,11 +23,16 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check server/src/server.js
+          node --check server/src/customer-auth.js
+          node --check server/src/customer-membership.js
           node --check admin/admin-api.js
           node --check admin/products.js
           node --check admin/content.js
           node --check admin/orders.js
           node --check admin/consignment.js
+          node --check member.js
+          node --check banner.js
+          node --check script.js
           node --check server/scripts/verify-production-config.js
       - name: Start isolated integration environment
         run: API_PORT=3300 DB_PORT=55432 docker compose -p jiangnan-ci up -d --build

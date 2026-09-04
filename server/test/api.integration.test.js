@@ -4,10 +4,10 @@ import test from 'node:test';
 const baseUrl = process.env.API_TEST_BASE?.replace(/\/$/, '');
 const integration = baseUrl ? test : test.skip;
 
-async function request(path, { role, method = 'GET', body } = {}) {
+async function request(path, { role, customerToken, method = 'GET', body } = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
     method,
-    headers: { ...(role ? { 'x-demo-role': role } : {}), ...(body ? { 'content-type': 'application/json' } : {}) },
+    headers: { ...(role ? { 'x-demo-role': role } : {}), ...(customerToken ? { authorization: `Bearer ${customerToken}` } : {}), ...(body ? { 'content-type': 'application/json' } : {}) },
     body: body ? JSON.stringify(body) : undefined
   });
   return { status: response.status, body: await response.json().catch(() => ({})) };
@@ -15,6 +15,15 @@ async function request(path, { role, method = 'GET', body } = {}) {
 
 function uniqueSku() {
   return `TEST-${crypto.randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase()}`;
+}
+
+async function createVerifiedCustomer() {
+  const email = `member-${crypto.randomUUID()}@example.test`;
+  const registration = await request('/api/v1/customer/register', { method: 'POST', body: { email, password: 'TestPassword123!', fullName: '整合測試會員', postalCode: '114', addressCity: '臺北市', addressDistrict: '內湖區', addressLine: '江南街105號' } });
+  assert.equal(registration.status, 201);
+  const verified = await request('/api/v1/customer/email-verifications', { method: 'POST', body: { email, code: registration.body.data.verificationCode } });
+  assert.equal(verified.status, 200);
+  return { token: verified.body.data.token };
 }
 
 integration('健康檢查可用', async () => {
@@ -75,11 +84,18 @@ integration('結帳意圖使用冪等鍵且現貨只保留一次', async () => {
   const products = await request('/api/v1/public/products');
   const product = products.body.data.find(item => item.kind === 'in_stock' && item.availableStock >= 2);
   assert.ok(product, '需要一個至少有兩件庫存的現貨商品');
+  const member = await createVerifiedCustomer();
+  const unverified = await request('/api/v1/checkout/intents', { method: 'POST', customerToken: member.token, body: { idempotencyKey: crypto.randomUUID(), items: [{ productId: product.id, quantity: 1 }] } });
+  assert.equal(unverified.status, 403);
+  const phone = await request('/api/v1/customer/phone-verifications', { method: 'POST', customerToken: member.token, body: { phone: '0912345678' } });
+  assert.equal(phone.status, 202);
+  const phoneVerified = await request('/api/v1/customer/phone-verifications/confirm', { method: 'POST', customerToken: member.token, body: { code: phone.body.data.verificationCode } });
+  assert.equal(phoneVerified.status, 200);
   const key = crypto.randomUUID();
-  const payload = { idempotencyKey: key, customerEmail: 'integration@example.test', items: [{ productId: product.id, quantity: 1 }] };
+  const payload = { idempotencyKey: key, items: [{ productId: product.id, quantity: 1 }] };
 
-  const first = await request('/api/v1/checkout/intents', { method: 'POST', body: payload });
-  const second = await request('/api/v1/checkout/intents', { method: 'POST', body: payload });
+  const first = await request('/api/v1/checkout/intents', { method: 'POST', customerToken: member.token, body: payload });
+  const second = await request('/api/v1/checkout/intents', { method: 'POST', customerToken: member.token, body: payload });
   assert.equal(first.status, 201);
   assert.equal(second.status, 200);
   assert.equal(first.body.data.id, second.body.data.id);

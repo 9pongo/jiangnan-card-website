@@ -147,17 +147,21 @@ document.querySelectorAll('.dialog-close').forEach(button => button.addEventList
 document.querySelector('[data-close-order]').addEventListener('click', () => orderConfirmationDialog.close());
 document.querySelectorAll('[data-toast]').forEach(button => button.addEventListener('click', () => showToast(button.dataset.toast)));
 consignDialog.querySelector('form').addEventListener('submit', async event => { event.preventDefault(); if (!apiBase) return showToast('此預覽站尚未連接寄售預約服務。'); const form = event.currentTarget; const submit = form.querySelector('button[type="submit"]'); submit.disabled = true; try { const values = new FormData(form); const response = await fetch(`${apiBase}/api/v1/public/consignment-requests`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sellerName: values.get('sellerName'), sellerContact: values.get('sellerContact'), cardDescription: values.get('cardDescription'), privacyConsent: values.get('privacyConsent') === 'on', privacyVersion: '2026-09-local' }) }); const body = await response.json(); if (!response.ok) throw new Error(body.error || '寄售預約送出失敗。'); form.reset(); consignDialog.close(); showToast(`寄售預約 ${body.data.caseNumber} 已送出，請等待門市聯繫。`); } catch (error) { showToast(error.message || '寄售預約送出失敗。'); } finally { submit.disabled = false; } });
-checkout.addEventListener('click', () => {
+async function beginCheckout() {
   if (!apiBase || cart.some(item => !item.id)) return showToast('此預覽站尚未連接正式訂購服務。');
+  if (!window.JiangnanCustomer?.customer) { window.JiangnanCustomer?.openMember(); return showToast('請先登入或註冊會員後再結帳。'); }
+  if (!(await window.JiangnanCustomer.requirePhone())) return;
   checkoutIdempotencyKey = crypto.randomUUID();
   checkoutDialog.showModal();
-});
+}
+checkout.addEventListener('click', beginCheckout);
+document.addEventListener('jiangnan:phone-verified', beginCheckout);
 checkoutDialog.addEventListener('close', () => { checkoutIdempotencyKey = null; });
 checkoutDialog.querySelector('form').addEventListener('submit', async event => {
   event.preventDefault();
   const submit = event.currentTarget.querySelector('button[type="submit"]'); submit.disabled = true;
   try {
-    const response = await fetch(`${apiBase}/api/v1/checkout/intents`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idempotencyKey: checkoutIdempotencyKey ??= crypto.randomUUID(), customerEmail: new FormData(event.currentTarget).get('customerEmail'), items: cart.map(item => ({ productId: item.id, quantity: item.quantity })) }) });
+    const response = await fetch(`${apiBase}/api/v1/checkout/intents`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${sessionStorage.getItem('jiangnan-customer-token') || ''}` }, body: JSON.stringify({ idempotencyKey: checkoutIdempotencyKey ??= crypto.randomUUID(), items: cart.map(item => ({ productId: item.id, quantity: item.quantity })) }) });
     const body = await response.json();
     if (!response.ok) throw new Error(body.error || '建立訂單失敗');
     cart.length = 0; renderCart(); checkoutDialog.close(); setCart(false); showOrderConfirmation(body.data);

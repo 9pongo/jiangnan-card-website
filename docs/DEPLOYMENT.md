@@ -30,6 +30,7 @@
 5. PostgreSQL 啟用每日備份、時間點還原及異地備援；物件儲存開啟版本控管與生命週期政策。
 6. API 僅經 HTTPS 對外，資料庫只放在私有網路。後台另加 WAF、速率限制與管理網段／SSO 條件。
 7. API 已停用 `X-Powered-By`，並回傳 `nosniff`、點擊框架防護、Referrer Policy 與 Permissions Policy；production 模式加上 HSTS。CDN／反向代理仍須統一施加 HTTPS、WAF 與速率限制，不能以本機 header 取代邊界防護。
+8. 顧客會員與後台員工帳號必須分離。顧客使用不可修改的電子信箱登入，付款前需驗證手機；正式環境必須由核可的 Email 與 SMS 供應商送出驗證碼。程式在 production 沒有通知服務時會拒絕驗證，禁止使用本機展示碼。
 
 ## Banner 素材上傳
 
