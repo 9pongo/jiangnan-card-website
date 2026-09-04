@@ -8,14 +8,17 @@ const dialog = document.querySelector('#banner-dialog');
 const toast = document.querySelector('.toast');
 const api = window.JiangnanAdminApi;
 const state = document.querySelector('[data-connection-state]');
+const bannerStatusFilter = document.querySelector('#banner-status-filter');
 const placementNames = { hero: '首頁主視覺', home_leaderboard: '首頁橫幅 970 × 250', product_sidebar: '商品側欄 300 × 600', mobile_banner: '手機橫幅' };
 const statusNames = { draft: '草稿', pending_review: '待審核', scheduled: '排程中', published: '發布中', disabled: '已停用' };
 const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
 function showToast(message) { toast.textContent = message; toast.classList.add('show'); clearTimeout(showToast.timeout); showToast.timeout = setTimeout(() => toast.classList.remove('show'), 2800); }
 function statusClass(status) { return status === '發布中' ? 'live' : status === '待審核' ? 'review' : status === '排程中' ? 'scheduled' : ''; }
-function render(filter = 'all') {
-  const selected = filter === 'all' ? banners : banners.filter(b => b.type === filter);
-  table.innerHTML = selected.map(b => `<tr><td><div class="campaign">${b.image ? `<img class="campaign-image" src="${esc(b.image)}" alt="">` : '<span class="campaign-image"></span>'}<div><b>${esc(b.name)}</b><small>${esc(b.owner)} ・ ${esc(b.id)}</small></div></div></td><td><span class="kind ${b.type}">${b.type === 'store' ? '店內活動' : '第三方廣告'}</span></td><td>${esc(b.placement)}</td><td>${esc(b.period)}</td><td>${esc(b.impressions)}<small> 曝光 / ${esc(b.clicks)} 點擊</small></td><td><span class="status ${statusClass(b.status)}">${esc(b.status)}</span></td><td>${actionButton(b)}</td></tr>`).join('');
+function render(filter = document.querySelector('[data-filter].selected').dataset.filter) {
+  const typeSelected = filter === 'all' ? banners : banners.filter(b => b.type === filter);
+  const selected = bannerStatusFilter.value === 'all' ? typeSelected : typeSelected.filter(b => b.status === bannerStatusFilter.value);
+  table.innerHTML = selected.length ? selected.map(b => `<tr><td><div class="campaign">${b.image ? `<img class="campaign-image" src="${esc(b.image)}" alt="">` : '<span class="campaign-image"></span>'}<div><b>${esc(b.name)}</b><small>${esc(b.owner)} ・ ${esc(b.id)}</small></div></div></td><td><span class="kind ${b.type}">${b.type === 'store' ? '店內活動' : '第三方廣告'}</span></td><td>${esc(b.placement)}</td><td>${esc(b.period)}</td><td>${esc(b.impressions)}<small> 曝光 / ${esc(b.clicks)} 點擊</small></td><td><span class="status ${statusClass(b.status)}">${esc(b.status)}</span></td><td>${actionButton(b)}</td></tr>`).join('') : '<tr><td colspan="7"><small>找不到符合條件的 Banner。</small></td></tr>';
+  document.querySelectorAll('[data-filter]').forEach(button => { button.querySelector('span').textContent = button.dataset.filter === 'all' ? banners.length : banners.filter(b => b.type === button.dataset.filter).length; });
   document.querySelector('#active-count').textContent = banners.filter(b => b.status === '發布中').length;
 }
 function apiBanner(item) {
@@ -30,6 +33,7 @@ function updateOverview(products, orders, consignments) {
 }
 render();
 document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => { document.querySelector('[data-filter].selected').classList.remove('selected'); button.classList.add('selected'); render(button.dataset.filter); }));
+bannerStatusFilter.addEventListener('change', () => render());
 document.querySelectorAll('#open-banner, #open-banner-2').forEach(button => button.addEventListener('click', () => dialog.showModal()));
 document.querySelector('#banner-form').addEventListener('submit', event => {
   event.preventDefault();
